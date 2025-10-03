@@ -74,7 +74,7 @@ class RecentActivitiesWidget extends Widget
                 'icon' => 'heroicon-o-banknotes',
                 'color' => 'success',
                 'title' => 'Payment Completed',
-                'description' => "Payment for {$payment->subscription->package->name}",
+                'description' => "Payment for {$payment->subscription?->package?->name}",
                 'customer' => $payment->customer->name,
                 'time' => $payment->created_at,
                 'amount' => $payment->amount,

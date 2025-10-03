@@ -1,7 +1,9 @@
 @extends('layouts.portal')
 
 @section('title', 'Dashboard - WiFi Portal')
-
+@php
+$settings = new \App\Settings\GeneralSettings();
+@endphp
 @section('content')
 <div class="space-y-6">
 
@@ -11,6 +13,18 @@
         <p class="text-gray-600">Manage your internet packages and view usage</p>
     </div>
 
+    <!-- Announcements -->
+    @if(isset($settings) && @$settings?->announcement_enabled)
+        <div class="bg-blue-50 border border-blue-200 rounded-xl p-4">
+            <h3 class="text-lg font-semibold text-blue-900 mb-3 flex items-center">
+                <i class="fas fa-bullhorn text-blue-600 mr-2"></i>
+                Announcements
+            </h3>
+            <div class="text-blue-800 text-sm leading-relaxed">
+                {!! nl2br(e(@$settings?->announcement_message)) !!}
+            </div>
+        </div>
+    @endif
     <!-- Active Subscription Card -->
     @if($activeSubscription)
         <div class="bg-white rounded-xl card-shadow p-6">
@@ -343,33 +357,6 @@
         </div>
     </div>
 
-    <!-- Announcements -->
-    @if(isset($settings) && @$settings?->announcement_text)
-        <div class="bg-blue-50 border border-blue-200 rounded-xl p-4">
-            <h3 class="text-lg font-semibold text-blue-900 mb-3 flex items-center">
-                <i class="fas fa-bullhorn text-blue-600 mr-2"></i>
-                Announcements
-            </h3>
-            <div class="text-blue-800 text-sm leading-relaxed">
-                {!! nl2br(e(@$settings?->announcement_text)) !!}
-            </div>
-        </div>
-    @endif
-
-    <!-- Advertisement -->
-    @if(isset($settings) && @$settings?->advertisement_text)
-        <div class="bg-gradient-to-r from-purple-500 to-pink-500 rounded-xl p-4 text-white text-center">
-            <h3 class="font-bold text-lg mb-2">Special Offer!</h3>
-            <p class="text-sm opacity-90">{{ @$settings?->advertisement_text }}</p>
-            <div class="mt-3">
-                <a href="{{ route('portal.packages') }}"
-                   class="inline-block bg-white text-purple-600 px-4 py-2 rounded-lg font-medium hover:bg-gray-100 transition-colors">
-                    View Packages
-                </a>
-            </div>
-        </div>
-    @endif
-
     <!-- Package History Section -->
     @if(isset($packageHistory) && $packageHistory->count() > 0)
         <div class="bg-white rounded-xl card-shadow p-6">
@@ -406,7 +393,7 @@
                                 </div>
                                 <div class="text-right">
                                     <div class="text-xl font-bold text-gray-900">
-                                        GH₵{{ number_format($subscription->amount, 2) }}
+                                        GH₵{{ number_format($subscription->package->price, 2) }}
                                     </div>
                                     <span class="px-3 py-1 text-sm rounded-full
                                         @if($subscription->status === 'active') bg-green-100 text-green-800

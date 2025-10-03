@@ -14,6 +14,29 @@
         <p class="text-gray-600">Select the internet package that suits your needs</p>
     </div>
 
+    @if(@$settings?->advertisement_enabled)
+        <div class="bg-gradient-to-r from-purple-500 to-pink-500 rounded-xl p-4 text-white text-center">
+            @if(@$settings?->advertisement_image)
+                <div class="mb-3">
+                    <img src="{{ asset('storage/' . $settings->advertisement_image) }}"
+                         alt="{{ @$settings?->advertisement_title }}"
+                         class="max-w-full h-32 mx-auto object-contain rounded-lg">
+                </div>
+            @endif
+
+            <h3 class="font-bold text-lg mb-2">{{ @$settings?->advertisement_title ?: 'Special Offer!' }}</h3>
+            <p class="text-sm opacity-90">{{ @$settings?->advertisement_description }}</p>
+
+            @if(@$settings?->advertisement_link)
+                <div class="mt-3">
+                    <a href="{{ @$settings?->advertisement_link }}"
+                       class="inline-block bg-white text-purple-600 px-4 py-2 rounded-lg font-medium hover:bg-gray-100 transition-colors">
+                        {{ @$settings?->advertisement_button_text ?: 'Learn More' }}
+                    </a>
+                </div>
+            @endif
+        </div>
+    @endif
     <!-- Active Subscription Warning -->
     @if(isset($purchaseCheck) && $purchaseCheck['has_active'])
         <div class="bg-yellow-50 border border-yellow-200 rounded-xl p-4">
@@ -239,13 +262,6 @@
                 <div class="text-blue-800 text-sm leading-relaxed">
                     {!! nl2br(e($settings->user_instructions)) !!}
                 </div>
-            </div>
-        @endif
-
-        @if(@$settings?->advertisement_text)
-            <div class="bg-gradient-to-r from-purple-500 to-pink-500 rounded-xl p-4 text-white text-center">
-                <h3 class="font-bold text-lg mb-2">Special Offer!</h3>
-                <p class="text-sm opacity-90">{{ @$settings?->advertisement_text }}</p>
             </div>
         @endif
     @endif

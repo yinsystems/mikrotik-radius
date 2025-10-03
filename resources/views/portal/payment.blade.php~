@@ -101,7 +101,7 @@
                     </label>
 
                     <label class="flex items-center p-3 border border-gray-300 rounded-lg cursor-pointer hover:bg-gray-50 transition-colors payment-option">
-                        <input type="radio" name="network" value="VODAFONE" class="mr-3" required>
+                        <input type="radio" name="network" value="vodafone" class="mr-3" required>
                         <div class="flex items-center space-x-2">
                             <div class="w-8 h-8 bg-red-500 rounded-full flex items-center justify-center">
                                 <span class="text-white font-bold text-xs">VOD</span>

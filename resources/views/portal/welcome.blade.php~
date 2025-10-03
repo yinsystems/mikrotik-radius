@@ -130,7 +130,7 @@ $settings= new \App\Settings\GeneralSettings();
             <div class="text-center mb-4">
                 <h3 class="text-lg font-semibold text-gray-900">
                     <i class="fas fa-play-circle text-blue-600 mr-2"></i>
-                   Learn something new!
+                   Learn how to use
                 </h3>
                 <p class="text-gray-600 text-sm mt-1">Learn about our high-speed WiFi services</p>
             </div>
