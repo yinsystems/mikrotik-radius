@@ -12,7 +12,17 @@ class Kernel extends ConsoleKernel
      */
     protected function schedule(Schedule $schedule): void
     {
-        // $schedule->command('inspire')->hourly();
+        // Expire subscriptions every minute
+        $schedule->command('subscriptions:expire --send-notices --cleanup')
+                 ->everyMinute()
+                 ->withoutOverlapping()
+                 ->runInBackground();
+
+        // Sync data usage every minute
+        $schedule->command('usage:sync --check-limits')
+                 ->everyMinute()
+                 ->withoutOverlapping()
+                 ->runInBackground();
     }
 
     /**

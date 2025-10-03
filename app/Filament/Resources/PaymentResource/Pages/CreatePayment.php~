@@ -1,0 +1,157 @@
+<?php
+
+namespace App\Filament\Resources\PaymentResource\Pages;
+
+use App\Filament\Resources\PaymentResource;
+use App\Models\Payment;
+use Filament\Actions;
+use Filament\Resources\Pages\CreateRecord;
+use Filament\Notifications\Notification;
+use Illuminate\Database\Eloquent\Model;
+use Illuminate\Contracts\Support\Htmlable;
+
+class CreatePayment extends CreateRecord
+{
+    protected static string $resource = PaymentResource::class;
+
+    public function getTitle(): string|Htmlable
+    {
+        return 'Record New Payment';
+    }
+
+    public function getSubheading(): string|Htmlable|null
+    {
+        return 'Record a new payment transaction from customer';
+    }
+
+    protected function getHeaderActions(): array
+    {
+        return [
+
+        ];
+    }
+
+    protected function handleRecordCreation(array $data): Model
+    {
+        // Auto-generate internal reference if not provided
+        if (empty($data['internal_reference'])) {
+            $data['internal_reference'] = Payment::generateInternalReference();
+        }
+
+        // Set currency to GHS if not provided
+        if (empty($data['currency'])) {
+            $data['currency'] = 'GHS';
+        }
+
+        // Set processed_by to current user
+        $data['processed_by'] = auth()->id();
+
+        // Create the payment
+        $payment = static::getModel()::create($data);
+
+        // Handle post-creation logic
+        $this->handlePostCreationLogic($payment);
+
+        return $payment;
+    }
+
+    protected function handlePostCreationLogic(Payment $payment): void
+    {
+        // If payment is completed and has a subscription, activate the subscription
+        if ($payment->isCompleted() && $payment->subscription) {
+            try {
+                $payment->subscription->activate();
+
+                Notification::make()
+                    ->title('Subscription activated')
+                    ->body('The associated subscription has been activated.')
+                    ->success()
+                    ->send();
+
+            } catch (\Exception $e) {
+                Notification::make()
+                    ->title('Subscription activation failed')
+                    ->body($e->getMessage())
+                    ->warning()
+                    ->send();
+            }
+        }
+
+        // Send notification for pending payments
+        if ($payment->isPending()) {
+            Notification::make()
+                ->title('Payment recorded as pending')
+                ->body('Remember to approve this payment once confirmed.')
+                ->warning()
+                ->send();
+        }
+
+        // Log the payment creation
+        activity()
+            ->performedOn($payment)
+            ->causedBy(auth()->user())
+            ->log('Payment created with status: ' . $payment->status);
+    }
+
+    protected function getRedirectUrl(): string
+    {
+        return $this->getResource()::getUrl('view', ['record' => $this->getRecord()]);
+    }
+
+    protected function getCreatedNotification(): ?Notification
+    {
+        return Notification::make()
+            ->success()
+            ->title('Payment recorded')
+            ->body('The payment has been recorded successfully.');
+    }
+
+    protected function mutateFormDataBeforeCreate(array $data): array
+    {
+        // Validate mobile money fields
+        if ($data['payment_method'] === 'mobile_money') {
+            if (empty($data['mobile_money_provider'])) {
+                throw new \Exception('Mobile money provider is required for mobile money payments.');
+            }
+
+            if (empty($data['mobile_number'])) {
+                throw new \Exception('Mobile number is required for mobile money payments.');
+            }
+        }
+
+        // Format mobile number
+        if (!empty($data['mobile_number'])) {
+            $data['mobile_number'] = $this->formatMobileNumber($data['mobile_number']);
+        }
+
+        // Set payment date to now if completed
+        if ($data['status'] === 'completed' && empty($data['payment_date'])) {
+            $data['payment_date'] = now();
+        }
+
+        return $data;
+    }
+
+    protected function formatMobileNumber(string $number): string
+    {
+        // Remove any non-numeric characters
+        $number = preg_replace('/[^0-9]/', '', $number);
+
+        // If it starts with 0, keep it as is (local format)
+        if (str_starts_with($number, '0') && strlen($number) === 10) {
+            return $number;
+        }
+
+        // If it starts with 233, format as international
+        if (str_starts_with($number, '233') && strlen($number) === 12) {
+            return '+' . $number;
+        }
+
+        // If it's 9 digits, add leading 0
+        if (strlen($number) === 9) {
+            return '0' . $number;
+        }
+
+        return $number; // Return as is if we can't format it
+    }
+}

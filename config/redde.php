@@ -1,0 +1,82 @@
+<?php
+
+return [
+    /*
+    |--------------------------------------------------------------------------
+    | Redde Payment Gateway Configuration
+    |--------------------------------------------------------------------------
+    |
+    | Configuration for Redde mobile money payment gateway integration.
+    | This allows processing payments from MTN, AirtelTigo, and Vodafone.
+    |
+    */
+
+    'api_key' => env('REDDE_API_KEY', ''),
+    'app_id' => env('REDDE_APP_ID', ''),
+    'nickname' => env('REDDE_NICKNAME', 'MikroTik RADIUS'),
+    'base_url' => env('REDDE_BASE_URL', 'https://api.reddeonline.com'),
+
+    /*
+    |--------------------------------------------------------------------------
+    | API Endpoints
+    |--------------------------------------------------------------------------
+    */
+    'endpoints' => [
+        'receive' => '/v1/receive',      // Customer paying merchant
+        'cashout' => '/v1/cashout',      // Merchant paying customer
+        'status' => '/v1/status',        // Check transaction status
+    ],
+
+    /*
+    |--------------------------------------------------------------------------
+    | Callback URLs
+    |--------------------------------------------------------------------------
+    | These URLs will receive payment status updates from Redde
+    */
+    'callbacks' => [
+        'receive' => env('REDDE_RECEIVE_CALLBACK_URL', '/api/redde/callback/receive'),
+        'cashout' => env('REDDE_CASHOUT_CALLBACK_URL', '/api/redde/callback/cashout'),
+    ],
+
+    /*
+    |--------------------------------------------------------------------------
+    | Supported Payment Options
+    |--------------------------------------------------------------------------
+    */
+    'payment_options' => [
+        'MTN' => 'MTN Mobile Money',
+        'AIRTELTIGO' => 'AirtelTigo Money',
+        'VODAFONE' => 'Vodafone Cash',
+    ],
+
+    /*
+    |--------------------------------------------------------------------------
+    | Transaction Settings
+    |--------------------------------------------------------------------------
+    */
+    'timeout' => env('REDDE_TIMEOUT', 30), // Request timeout in seconds
+    'retry_attempts' => env('REDDE_RETRY_ATTEMPTS', 3),
+    'retry_delay' => env('REDDE_RETRY_DELAY', 5), // Delay between retries in seconds
+
+    /*
+    |--------------------------------------------------------------------------
+    | Status Mappings
+    |--------------------------------------------------------------------------
+    | Map Redde statuses to internal payment statuses
+    */
+    'status_mapping' => [
+        'OK' => 'initiated',
+        'PENDING' => 'processing',
+        'PROGRESS' => 'processing',
+        'PAID' => 'completed',
+        'FAILED' => 'failed',
+    ],
+
+    /*
+    |--------------------------------------------------------------------------
+    | Logging
+    |--------------------------------------------------------------------------
+    */
+    'log_requests' => env('REDDE_LOG_REQUESTS', true),
+    'log_responses' => env('REDDE_LOG_RESPONSES', true),
+];

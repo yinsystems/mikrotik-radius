@@ -25,7 +25,10 @@ class EventServiceProvider extends ServiceProvider
      */
     public function boot(): void
     {
-        //
+        // Register model observers for RADIUS integration
+        \App\Models\Subscription::observe(\App\Listeners\SubscriptionEventListener::class);
+        \App\Models\Package::observe(\App\Listeners\PackageEventListener::class);
+        \App\Models\Customer::observe(\App\Listeners\CustomerEventListener::class);
     }
 
     /**

@@ -1,0 +1,92 @@
+<?php
+
+return [
+    /*
+    |--------------------------------------------------------------------------
+    | OTP Configuration
+    |--------------------------------------------------------------------------
+    |
+    | Configuration for One-Time Password (OTP) service
+    |
+    */
+
+    /*
+    |--------------------------------------------------------------------------
+    | OTP Settings
+    |--------------------------------------------------------------------------
+    */
+    'length' => env('OTP_LENGTH', 6),
+    'expiry_minutes' => env('OTP_EXPIRY_MINUTES', 10),
+    'max_attempts' => env('OTP_MAX_ATTEMPTS', 3),
+    'numeric_only' => env('OTP_NUMERIC_ONLY', true),
+
+    /*
+    |--------------------------------------------------------------------------
+    | Cache Settings
+    |--------------------------------------------------------------------------
+    */
+    'cache_prefix' => env('OTP_CACHE_PREFIX', 'otp'),
+    'cache_driver' => env('OTP_CACHE_DRIVER', null), // null = use default cache driver
+
+    /*
+    |--------------------------------------------------------------------------
+    | Rate Limiting
+    |--------------------------------------------------------------------------
+    */
+    'rate_limit' => [
+        'enabled' => env('OTP_RATE_LIMIT_ENABLED', true),
+        'max_requests' => env('OTP_RATE_LIMIT_MAX_REQUESTS', 3), // Max OTP requests
+        'window_minutes' => env('OTP_RATE_LIMIT_WINDOW_MINUTES', 60), // Time window
+    ],
+
+    /*
+    |--------------------------------------------------------------------------
+    | Security Settings
+    |--------------------------------------------------------------------------
+    */
+    'security' => [
+        'hash_identifier' => env('OTP_HASH_IDENTIFIER', true), // Hash identifiers in cache
+        'log_attempts' => env('OTP_LOG_ATTEMPTS', true), // Log all OTP attempts
+        'clear_on_max_attempts' => env('OTP_CLEAR_ON_MAX_ATTEMPTS', true), // Clear OTP after max attempts
+    ],
+
+    /*
+    |--------------------------------------------------------------------------
+    | Notification Integration
+    |--------------------------------------------------------------------------
+    */
+    'notifications' => [
+        'auto_send' => env('OTP_AUTO_SEND', false), // Automatically send OTP via SMS/Email
+        'sms_template' => env('OTP_SMS_TEMPLATE', 'Your OTP code is: {otp}. Valid for {minutes} minutes.'),
+        'email_template' => env('OTP_EMAIL_TEMPLATE', 'Your verification code is {otp}. This code will expire in {minutes} minutes.'),
+        'email_subject' => env('OTP_EMAIL_SUBJECT', 'Your Verification Code'),
+    ],
+
+    /*
+    |--------------------------------------------------------------------------
+    | Custom OTP Types
+    |--------------------------------------------------------------------------
+    */
+    'types' => [
+        'login' => [
+            'length' => env('OTP_LOGIN_LENGTH', 6),
+            'expiry_minutes' => env('OTP_LOGIN_EXPIRY', 5),
+            'max_attempts' => env('OTP_LOGIN_MAX_ATTEMPTS', 3),
+        ],
+        'registration' => [
+            'length' => env('OTP_REGISTRATION_LENGTH', 6),
+            'expiry_minutes' => env('OTP_REGISTRATION_EXPIRY', 15),
+            'max_attempts' => env('OTP_REGISTRATION_MAX_ATTEMPTS', 5),
+        ],
+        'password_reset' => [
+            'length' => env('OTP_PASSWORD_RESET_LENGTH', 6),
+            'expiry_minutes' => env('OTP_PASSWORD_RESET_EXPIRY', 10),
+            'max_attempts' => env('OTP_PASSWORD_RESET_MAX_ATTEMPTS', 3),
+        ],
+        'transaction' => [
+            'length' => env('OTP_TRANSACTION_LENGTH', 6),
+            'expiry_minutes' => env('OTP_TRANSACTION_EXPIRY', 5),
+            'max_attempts' => env('OTP_TRANSACTION_MAX_ATTEMPTS', 3),
+        ],
+    ],
+];
