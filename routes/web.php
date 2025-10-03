@@ -15,7 +15,7 @@ use App\Http\Controllers\CaptivePortalController;
 */
 
 Route::get('/', function () {
-    return view('welcome');
+    return "Welcome to the Captive Portal";
 });
 
 // Captive Portal Routes
@@ -28,24 +28,24 @@ Route::group(['prefix' => 'portal', 'as' => 'portal.'], function () {
     Route::get('/login', [CaptivePortalController::class, 'showLogin'])->name('login');
     Route::post('/login', [CaptivePortalController::class, 'login'])->name('login.submit');
     Route::post('/verify-login-otp', [CaptivePortalController::class, 'verifyLoginOtp'])->name('verify.login.otp');
-    
+
     // Protected routes (require session management)
     Route::middleware(['portal.session'])->group(function () {
         // Package selection (user must be logged in)
         Route::get('/packages', [CaptivePortalController::class, 'showPackages'])->name('packages');
         Route::post('/select-package', [CaptivePortalController::class, 'selectPackage'])->name('select.package');
-        
+
         // Payment (user must be logged in and have selected package)
         Route::get('/payment', [CaptivePortalController::class, 'showPayment'])->name('payment');
         Route::post('/process-payment', [CaptivePortalController::class, 'processPayment'])->name('process.payment');
         Route::post('/check-payment-status', [CaptivePortalController::class, 'checkPaymentStatus'])->name('check.payment.status');
-        
+
         // Dashboard (user must be logged in)
         Route::get('/dashboard', [CaptivePortalController::class, 'showDashboard'])->name('dashboard');
-        
+
         // Account management
         Route::post('/change-password', [CaptivePortalController::class, 'changePassword'])->name('change-password');
-        
+
         // Logout (user must be logged in)
         Route::post('/logout', [CaptivePortalController::class, 'logout'])->name('logout');
     });
