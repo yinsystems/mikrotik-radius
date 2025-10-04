@@ -79,25 +79,20 @@ class RadGroupCheck extends Model
 
     public static function setGroupBandwidth($groupname, $downloadKbps = null, $uploadKbps = null)
     {
-        $results = [];
-
-        // Set download bandwidth limit if provided
-        if ($downloadKbps !== null) {
-            $results['download'] = self::updateOrCreate(
-                ['groupname' => $groupname, 'attribute' => 'WISPr-Bandwidth-Max-Down'],
-                ['op' => ':=', 'value' => $downloadKbps * 1000] // Convert to bps
+        // For MikroTik, we should use Mikrotik-Rate-Limit instead of WISPr attributes
+        if ($uploadKbps !== null && $downloadKbps !== null) {
+            // Convert Kbps to Mbps for proper MikroTik format
+            $uploadMbps = round($uploadKbps / 1000, 1);
+            $downloadMbps = round($downloadKbps / 1000, 1);
+            
+            return self::updateOrCreate(
+                ['groupname' => $groupname, 'attribute' => 'Mikrotik-Rate-Limit'],
+                ['op' => ':=', 'value' => "{$uploadMbps}M/{$downloadMbps}M"]
             );
         }
 
-        // Set upload bandwidth limit if provided
-        if ($uploadKbps !== null) {
-            $results['upload'] = self::updateOrCreate(
-                ['groupname' => $groupname, 'attribute' => 'WISPr-Bandwidth-Max-Up'],
-                ['op' => ':=', 'value' => $uploadKbps * 1000] // Convert to bps
-            );
-        }
-
-        return $results;
+        // If only one value provided, we can't set Mikrotik-Rate-Limit (needs both)
+        return null;
     }
 
     public static function setGroupDataLimit($groupname, $limitMB)
@@ -128,6 +123,14 @@ class RadGroupCheck extends Model
         return self::updateOrCreate(
             ['groupname' => $groupname, 'attribute' => 'Idle-Timeout'],
             ['op' => ':=', 'value' => $idleTimeoutSeconds]
+        );
+    }
+
+    public static function setGroupServiceType($groupname, $serviceType = 'Framed-User')
+    {
+        return self::updateOrCreate(
+            ['groupname' => $groupname, 'attribute' => 'Service-Type'],
+            ['op' => ':=', 'value' => $serviceType]
         );
     }
 

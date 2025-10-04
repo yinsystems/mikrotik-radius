@@ -437,7 +437,7 @@ class CaptivePortalController extends Controller
     {
         $validator = Validator::make($request->all(), [
             'package_id' => 'required|exists:packages,id',
-            'network' => 'required|in:mtn,vodafone,airteltigo,telecel',
+            'network' => 'required|in:mtn,AIRTELTIGO,VODAFONE',
             'momo_phone' => 'required|string|regex:/^0[0-9]{9}$/',
         ]);
 

@@ -39,9 +39,13 @@ class RadGroupReply extends Model
     // Helper methods for common group reply attributes
     public static function setGroupBandwidth($groupname, $uploadKbps, $downloadKbps)
     {
+        // Convert Kbps to Mbps for proper MikroTik format
+        $uploadMbps = round($uploadKbps / 1000, 1);
+        $downloadMbps = round($downloadKbps / 1000, 1);
+        
         return self::updateOrCreate(
             ['groupname' => $groupname, 'attribute' => 'Mikrotik-Rate-Limit'],
-            ['op' => ':=', 'value' => "{$uploadKbps}k/{$downloadKbps}k"]
+            ['op' => '=', 'value' => "{$uploadMbps}M/{$downloadMbps}M"]
         );
     }
 
@@ -49,7 +53,7 @@ class RadGroupReply extends Model
     {
         return self::updateOrCreate(
             ['groupname' => $groupname, 'attribute' => 'Mikrotik-Total-Limit'],
-            ['op' => ':=', 'value' => $limitBytes]
+            ['op' => '=', 'value' => $limitBytes]
         );
     }
 
@@ -57,7 +61,7 @@ class RadGroupReply extends Model
     {
         return self::updateOrCreate(
             ['groupname' => $groupname, 'attribute' => 'Session-Timeout'],
-            ['op' => ':=', 'value' => $seconds]
+            ['op' => '=', 'value' => $seconds]
         );
     }
 
@@ -65,7 +69,7 @@ class RadGroupReply extends Model
     {
         return self::updateOrCreate(
             ['groupname' => $groupname, 'attribute' => 'Idle-Timeout'],
-            ['op' => ':=', 'value' => $seconds]
+            ['op' => '=', 'value' => $seconds]
         );
     }
 
@@ -110,6 +114,22 @@ class RadGroupReply extends Model
         );
     }
 
+    public static function setGroupServiceType($groupname, $serviceType = 'Framed-User')
+    {
+        return self::updateOrCreate(
+            ['groupname' => $groupname, 'attribute' => 'Service-Type'],
+            ['op' => '=', 'value' => $serviceType]
+        );
+    }
+
+    public static function setGroupFramedProtocol($groupname, $protocol = 'PPP')
+    {
+        return self::updateOrCreate(
+            ['groupname' => $groupname, 'attribute' => 'Framed-Protocol'],
+            ['op' => '=', 'value' => $protocol]
+        );
+    }
+
     // Package-specific group methods
     public static function setPackageGroupAttributes($packageId, $attributes)
     {
@@ -146,6 +166,10 @@ class RadGroupReply extends Model
         if ($package->vlan_id) {
             self::setGroupVlan($groupname, $package->vlan_id);
         }
+
+        // Set essential MikroTik authentication attributes
+        self::setGroupServiceType($groupname, 'Framed-User');
+        self::setGroupFramedProtocol($groupname, 'PPP');
 
         // Set Mikrotik address list for package categorization
         self::setGroupMikrotikAddressList($groupname, "package_{$package->id}_users");

@@ -180,7 +180,7 @@ class CaptivePortalController extends Controller
             return response()->json([
                 'success' => true,
                 'message' => 'Registration successful! Please select a package.',
-                'redirect' => route('portal.packages')
+                'redirect' => route('portal.dashboard')
             ]);
         }
 

@@ -128,10 +128,16 @@ class Package extends Model
     // RADIUS Group Management Methods
     public function setupRadiusGroup()
     {
+        $groupname = $this->getGroupName();
+        
         // Setup basic group checks
-        RadGroupCheck::setGroupBandwidth($this->getGroupName(), $this->bandwidth_upload, $this->bandwidth_download);
-        RadGroupCheck::setGroupDataLimit($this->getGroupName(), $this->data_limit);
-        RadGroupCheck::setGroupSimultaneousUse($this->getGroupName(), $this->simultaneous_users);
+        RadGroupCheck::setGroupBandwidth($groupname, $this->bandwidth_upload, $this->bandwidth_download);
+        RadGroupCheck::setGroupDataLimit($groupname, $this->data_limit);
+        RadGroupCheck::setGroupSimultaneousUse($groupname, $this->simultaneous_users);
+        
+        // Setup essential authentication attributes
+        RadGroupCheck::setGroupAuthType($groupname, 'Local');
+        RadGroupCheck::setGroupServiceType($groupname, 'Framed-User');
 
         // Setup group replies
         RadGroupReply::setupPackageGroupFromPackage($this);

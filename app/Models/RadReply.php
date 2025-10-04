@@ -35,9 +35,13 @@ class RadReply extends Model
     // Helper methods for Mikrotik attributes
     public static function setBandwidthLimit($username, $uploadKbps, $downloadKbps)
     {
+        // Convert Kbps to Mbps for proper MikroTik format
+        $uploadMbps = round($uploadKbps / 1000, 1);
+        $downloadMbps = round($downloadKbps / 1000, 1);
+        
         return self::updateOrCreate(
             ['username' => $username, 'attribute' => 'Mikrotik-Rate-Limit'],
-            ['op' => ':=', 'value' => "{$uploadKbps}k/{$downloadKbps}k"]
+            ['op' => ':=', 'value' => "{$uploadMbps}M/{$downloadMbps}M"]
         );
     }
 
