@@ -211,7 +211,7 @@ class RadGroupCheck extends Model
         
         // Set authentication attributes
         self::setGroupAuthType($groupname, 'Local');
-        self::setGroupServiceType($groupname, 'Framed-User'); // Change from Login-User to Framed-User for consistency
+        self::setGroupServiceType($groupname, 'Login-User'); // Changed to Login-User as requested
         
         return $groupname;
     }

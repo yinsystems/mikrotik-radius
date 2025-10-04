@@ -137,7 +137,7 @@ class Package extends Model
         
         // Setup essential authentication attributes
         RadGroupCheck::setGroupAuthType($groupname, 'Local');
-        RadGroupCheck::setGroupServiceType($groupname, 'Framed-User');
+        RadGroupCheck::setGroupServiceType($groupname, 'Login-User'); // Changed to Login-User as requested
 
         // Setup group replies
         RadGroupReply::setupPackageGroupFromPackage($this);
