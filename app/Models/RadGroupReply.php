@@ -169,10 +169,10 @@ class RadGroupReply extends Model
     {
         $groupname = "package_{$package->id}";
 
-        // Set bandwidth limits
-        if ($package->bandwidth_upload && $package->bandwidth_download) {
-            self::setGroupBandwidth($groupname, $package->bandwidth_upload, $package->bandwidth_download);
-        }
+        // Set bandwidth limits (use defaults if not specified)
+        $uploadKbps = $package->bandwidth_upload ?: 2000;   // Default 2M upload
+        $downloadKbps = $package->bandwidth_download ?: 5000; // Default 5M download
+        self::setGroupBandwidth($groupname, $uploadKbps, $downloadKbps);
 
         // Set data limits
         if ($package->data_limit) {

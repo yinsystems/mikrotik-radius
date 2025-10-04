@@ -131,9 +131,13 @@ class Package extends Model
         $groupname = $this->getGroupName();
         
         // Setup basic group checks
-        RadGroupCheck::setGroupBandwidth($groupname, $this->bandwidth_upload, $this->bandwidth_download);
+        // Always set bandwidth (use default 2M/5M if not specified)
+        $uploadKbps = $this->bandwidth_upload ?: 2000;   // Default 2M upload
+        $downloadKbps = $this->bandwidth_download ?: 5000; // Default 5M download
+        RadGroupCheck::setGroupBandwidth($groupname, $downloadKbps, $uploadKbps);
+        
         RadGroupCheck::setGroupDataLimit($groupname, $this->data_limit);
-        RadGroupCheck::setGroupSimultaneousUse($groupname, $this->simultaneous_users);
+        RadGroupCheck::setGroupSimultaneousUse($groupname, $this->simultaneous_users ?: 1);
         
         // Setup essential authentication attributes
         RadGroupCheck::setGroupAuthType($groupname, 'Local');
