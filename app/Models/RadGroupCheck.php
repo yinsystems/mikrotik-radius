@@ -201,6 +201,21 @@ class RadGroupCheck extends Model
         return $groupname;
     }
 
+    // Setup default MikroTik group checks (matching your screenshot)
+    public static function setupDefaultMikrotikGroup()
+    {
+        $groupname = 'default';
+        
+        // Set default bandwidth (matching your screenshot: 2M/5M)
+        self::setGroupBandwidth($groupname, 5000, 2000); // 5M download, 2M upload
+        
+        // Set authentication attributes
+        self::setGroupAuthType($groupname, 'Local');
+        self::setGroupServiceType($groupname, 'Framed-User'); // Change from Login-User to Framed-User for consistency
+        
+        return $groupname;
+    }
+
     public static function removePackageGroupAttribute($packageId, $attribute)
     {
         $groupname = "package_{$packageId}";
