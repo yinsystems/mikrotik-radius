@@ -211,6 +211,20 @@ class Package extends Model
         });
     }
 
+    // Static method to setup RADIUS groups for all existing packages
+    public static function setupAllRadiusGroups()
+    {
+        $packages = self::all();
+        $setupCount = 0;
+        
+        foreach ($packages as $package) {
+            $package->setupRadiusGroup();
+            $setupCount++;
+        }
+        
+        return $setupCount;
+    }
+
     public function scopeByDurationType($query, $type)
     {
         return $query->where('duration_type', $type);

@@ -255,6 +255,9 @@ class Subscription extends Model
         // Assign to package group
         RadUserGroup::assignToPackageGroup($this->username, $this->package->id);
         
+        // Ensure package group is properly set up with all required attributes
+        $this->package->setupRadiusGroup();
+        
         return $this;
     }
     
