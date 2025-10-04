@@ -130,22 +130,38 @@ class Package extends Model
     {
         $groupname = $this->getGroupName();
         
-        // Setup basic group checks
+        // Clean up any existing entries first
+        RadGroupCheck::cleanupGroup($groupname);
+        RadGroupReply::cleanupGroup($groupname);
+        
+        // Setup group checks using the exact working default template
         // Always set bandwidth (use default 2M/5M if not specified)
         $uploadKbps = $this->bandwidth_upload ?: 2000;   // Default 2M upload
         $downloadKbps = $this->bandwidth_download ?: 5000; // Default 5M download
         RadGroupCheck::setGroupBandwidth($groupname, $downloadKbps, $uploadKbps);
         
-        RadGroupCheck::setGroupDataLimit($groupname, $this->data_limit);
-        RadGroupCheck::setGroupSimultaneousUse($groupname, $this->simultaneous_users ?: 1);
+        // Set Service-Type (matching working default: Login-User)
+        RadGroupCheck::setGroupServiceType($groupname, 'Login-User');
         
-        // Setup essential authentication attributes
-        RadGroupCheck::setGroupAuthType($groupname, 'Local');
-        RadGroupCheck::setGroupServiceType($groupname, 'Login-User'); // Changed to Login-User as requested
+        // Setup group replies using the exact working default template (minimal)
+        $this->setupMinimalRadiusGroupReplies($groupname, $uploadKbps, $downloadKbps);
 
-        // Setup group replies
-        RadGroupReply::setupPackageGroupFromPackage($this);
+        return $this;
+    }
 
+    private function setupMinimalRadiusGroupReplies($groupname, $uploadKbps, $downloadKbps)
+    {
+        // Only create the exact 3 attributes that exist in the working default:
+        
+        // 1. Mikrotik-Group (matching working default template)
+        RadGroupReply::setGroupMikrotikGroup($groupname, $groupname);
+        
+        // 2. Mikrotik-Rate-Limit (matching working default template)
+        RadGroupReply::setGroupBandwidth($groupname, $uploadKbps, $downloadKbps);
+        
+        // 3. Reply-Message (matching working default template)
+        RadGroupReply::setGroupReplyMessage($groupname, "Welcome, %{User-Name}");
+        
         return $this;
     }
 

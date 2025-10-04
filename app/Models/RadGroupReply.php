@@ -45,7 +45,7 @@ class RadGroupReply extends Model
         
         return self::updateOrCreate(
             ['groupname' => $groupname, 'attribute' => 'Mikrotik-Rate-Limit'],
-            ['op' => '=', 'value' => "{$uploadMbps}M/{$downloadMbps}M"]
+            ['op' => ':=', 'value' => "{$uploadMbps}M/{$downloadMbps}M"]
         );
     }
 
@@ -137,7 +137,7 @@ class RadGroupReply extends Model
         
         return self::updateOrCreate(
             ['groupname' => $groupname, 'attribute' => 'Mikrotik-Group'],
-            ['op' => '=', 'value' => $mikrotikGroup]
+            ['op' => ':=', 'value' => $mikrotikGroup]
         );
     }
 
@@ -148,7 +148,7 @@ class RadGroupReply extends Model
         
         return self::updateOrCreate(
             ['groupname' => $groupname, 'attribute' => 'Reply-Message'],
-            ['op' => '=', 'value' => $message]
+            ['op' => ':=', 'value' => $message]
         );
     }
 
