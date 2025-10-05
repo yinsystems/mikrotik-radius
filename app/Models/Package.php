@@ -143,6 +143,24 @@ class Package extends Model
         // Set Service-Type (matching working default: Login-User)
         RadGroupCheck::setGroupServiceType($groupname, 'Login-User');
         
+        // Set Max-All-Session for time-based packages instead of individual expiration
+        if ($this->duration_type === 'hourly') {
+            $totalSeconds = $this->duration_value * 3600; // Convert hours to seconds
+            RadGroupCheck::setGroupMaxAllSession($groupname, $totalSeconds);
+        } elseif ($this->duration_type === 'daily') {
+            $totalSeconds = $this->duration_value * 24 * 3600; // Convert days to seconds
+            RadGroupCheck::setGroupMaxAllSession($groupname, $totalSeconds);
+        } elseif ($this->duration_type === 'weekly') {
+            $totalSeconds = $this->duration_value * 7 * 24 * 3600; // Convert weeks to seconds
+            RadGroupCheck::setGroupMaxAllSession($groupname, $totalSeconds);
+        } elseif ($this->duration_type === 'monthly') {
+            $totalSeconds = $this->duration_value * 30 * 24 * 3600; // Convert months to seconds (30 days)
+            RadGroupCheck::setGroupMaxAllSession($groupname, $totalSeconds);
+        } elseif ($this->duration_type === 'trial' && $this->trial_duration_hours) {
+            $totalSeconds = $this->trial_duration_hours * 3600; // Convert trial hours to seconds
+            RadGroupCheck::setGroupMaxAllSession($groupname, $totalSeconds);
+        }
+        
         // Setup group replies using the exact working default template (minimal)
         $this->setupMinimalRadiusGroupReplies($groupname, $uploadKbps, $downloadKbps);
 

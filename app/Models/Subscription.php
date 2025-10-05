@@ -228,8 +228,8 @@ class Subscription extends Model
     {
         // Create authentication entry
         RadCheck::setPassword($this->username, $this->password);
-        // Use proper RADIUS expiration format: "Mmm DD YYYY HH:MM:SS"
-        RadCheck::setExpiration($this->username, $this->expires_at->format('M d Y H:i:s'));
+        // Remove individual expiration - rely on package group Max-All-Session instead
+        RadCheck::removeExpiration($this->username);
         
         // Set simultaneous use limit
         if ($this->package->simultaneous_users) {
@@ -253,7 +253,8 @@ class Subscription extends Model
             RadReply::setVlan($this->username, $this->package->vlan_id);
         }
         
-        // Assign to package group
+        // Assign to package group (remove from any previous package groups first)
+        RadUserGroup::removeFromPackageGroups($this->username);
         RadUserGroup::assignToPackageGroup($this->username, $this->package->id);
         
         // Ensure package group is properly set up with all required attributes
@@ -264,8 +265,8 @@ class Subscription extends Model
     
     public function updateRadiusUser()
     {
-        // Update expiration (use proper RADIUS format)
-        RadCheck::setExpiration($this->username, $this->expires_at->format('M d Y H:i:s'));
+        // Remove individual expiration - rely on package group Max-All-Session instead
+        RadCheck::removeExpiration($this->username);
         
         // Update password if changed
         RadCheck::setPassword($this->username, $this->password);
