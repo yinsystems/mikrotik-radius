@@ -157,18 +157,7 @@ class Package extends Model
             'value' => (string)$simultaneousUsers
         ]);
 
-        // 2. Max-All-Session: Maximum total session time (in seconds)
-        if ($this->isTimeBased()) {
-            $maxAllSession = $this->getDurationInSeconds();
-            RadGroupCheck::create([
-                'groupname' => $groupname,
-                'attribute' => 'Max-All-Session',
-                'op' => ':=',
-                'value' => (string)$maxAllSession
-            ]);
-        }
-
-        // 3. Session-Timeout: Per-session timeout (same as Max-All-Session for simplicity)
+        // 2. Session-Timeout: Per-session timeout
         if ($this->isTimeBased()) {
             $sessionTimeout = $this->getDurationInSeconds();
             RadGroupCheck::create([
@@ -193,7 +182,7 @@ class Package extends Model
             $dataLimitBytes = $this->getDataLimitInBytes();
             RadGroupCheck::create([
                 'groupname' => $groupname,
-                'attribute' => 'ChilliSpot-Max-Total-Octets',
+                'attribute' => 'Mikrotik-Total-Limit',
                 'op' => ':=',
                 'value' => (string)$dataLimitBytes
             ]);
@@ -212,12 +201,12 @@ class Package extends Model
         $uploadBps = $uploadKbps * 1000;
         $downloadBps = $downloadKbps * 1000;
 
-        // 1. ChilliSpot-Max-Total-Octets: Data limit in bytes (if applicable)
+        // 1. Mikrotik-Total-Limit: Data limit in bytes (if applicable)
         if ($this->data_limit) {
             $dataLimitBytes = $this->getDataLimitInBytes();
             RadGroupReply::create([
                 'groupname' => $groupname,
-                'attribute' => 'ChilliSpot-Max-Total-Octets',
+                'attribute' => 'Mikrotik-Total-Limit',
                 'op' => ':=',
                 'value' => (string)$dataLimitBytes
             ]);
