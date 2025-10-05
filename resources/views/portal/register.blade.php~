@@ -360,18 +360,17 @@
             .then(data => {
                 hideLoading();
                 console.log('Registration response:', data);
-
+                
                 if (data.success) {
                     // Registration successful, redirect to packages or dashboard
-                    // showAlert('Success', 'Account created successfully!', function() {
-                    //
-                    // });
-                    console.log('Redirecting to:', data.redirect_url || "{{ route('portal.packages') }}");
-                    if (data.redirect_url) {
-                        window.location.href = data.redirect_url;
-                    } else {
-                        window.location.href = "{{ route('portal.packages') }}";
-                    }
+                    showAlert('Success', 'Account created successfully!', function() {
+                        console.log('Redirecting to:', data.redirect_url || "{{ route('portal.packages') }}");
+                        if (data.redirect_url) {
+                            window.location.href = data.redirect_url;
+                        } else {
+                            window.location.href = "{{ route('portal.packages') }}";
+                        }
+                    });
                 } else {
                     console.error('Registration failed:', data.message);
                     showAlert('Error', data.message || 'Registration failed. Please try again.');

@@ -322,18 +322,17 @@ $settings  = new GeneralSettings();
             .then(data => {
                 hideLoading();
                 console.log('Login response:', data);
-
+                
                 if (data.success) {
                     // Login successful, redirect to dashboard
-                    // showAlert('Success', 'Login successful!', function() {
-                    //
-                    // });
-                    console.log('Redirecting to:', data.redirect_url || "{{ route('portal.dashboard') }}");
-                    if (data.redirect_url) {
-                        window.location.href = data.redirect_url;
-                    } else {
-                        window.location.href = "{{ route('portal.dashboard') }}";
-                    }
+                    showAlert('Success', 'Login successful!', function() {
+                        console.log('Redirecting to:', data.redirect_url || "{{ route('portal.dashboard') }}");
+                        if (data.redirect_url) {
+                            window.location.href = data.redirect_url;
+                        } else {
+                            window.location.href = "{{ route('portal.dashboard') }}";
+                        }
+                    });
                 } else {
                     console.error('Login failed:', data.message);
                     showAlert('Error', data.message || 'Login failed. Please try again.');

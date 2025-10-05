@@ -49,6 +49,10 @@ class GeneralSettings extends Settings
     public string $currency_symbol;
     public string $date_format;
     
+    // Authentication Settings
+    public bool $enable_otp_verification;
+    public bool $enable_login_otp_verification;
+    
     public static function group(): string
     {
         return 'general';
@@ -99,6 +103,10 @@ class GeneralSettings extends Settings
             'currency' => 'GHS',
             'currency_symbol' => '₵',
             'date_format' => 'd/m/Y',
+            
+            // Authentication Settings
+            'enable_otp_verification' => true,
+            'enable_login_otp_verification' => true,
         ];
     }
 }

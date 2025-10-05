@@ -277,6 +277,22 @@ class ManageGeneralSettings extends Page
                         Forms\Components\Tabs\Tab::make('System Configuration')
                             ->icon('heroicon-o-cog-8-tooth')
                             ->schema([
+                                Forms\Components\Section::make('Authentication Settings')
+                                    ->description('Configure authentication and security settings')
+                                    ->schema([
+                                        Forms\Components\Toggle::make('enable_otp_verification')
+                                            ->label('Enable Registration OTP Verification')
+                                            ->helperText('When enabled, users must verify their phone number with an OTP code during registration. When disabled, users can register directly without OTP verification.')
+                                            ->default(true)
+                                            ->inline(false),
+                                        
+                                        Forms\Components\Toggle::make('enable_login_otp_verification')
+                                            ->label('Enable Login OTP Verification')
+                                            ->helperText('When enabled, users must verify their phone number with an OTP code during login. When disabled, users login with their phone number and password.')
+                                            ->default(true)
+                                            ->inline(false),
+                                    ])->columns(1),
+                                
                                 Forms\Components\Section::make('Regional Settings')
                                     ->schema([
                                         Forms\Components\Select::make('timezone')

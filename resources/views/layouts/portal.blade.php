@@ -402,6 +402,8 @@ $settings = new \App\Settings\GeneralSettings();
                 if (data.success) {
                     if (options.onSuccess) {
                         options.onSuccess(data);
+                    } else if (data.redirect_url) {
+                        window.location.href = data.redirect_url;
                     } else if (data.redirect) {
                         window.location.href = data.redirect;
                     } else {

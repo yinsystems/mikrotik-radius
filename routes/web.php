@@ -28,6 +28,9 @@ Route::group(['prefix' => 'portal', 'as' => 'portal.'], function () {
     Route::get('/login', [CaptivePortalController::class, 'showLogin'])->name('login');
     Route::post('/login', [CaptivePortalController::class, 'login'])->name('login.submit');
     Route::post('/verify-login-otp', [CaptivePortalController::class, 'verifyLoginOtp'])->name('verify.login.otp');
+    
+    // Settings check routes
+    Route::get('/otp-status', [CaptivePortalController::class, 'getOtpStatus'])->name('otp.status');
 
     // Protected routes (require session management)
     Route::middleware(['portal.session'])->group(function () {

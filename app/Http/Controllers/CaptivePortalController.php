@@ -9,6 +9,7 @@ use App\Models\Payment;
 use App\Services\OtpService;
 use App\Services\ReddePaymentService;
 use App\Helpers\SettingsHelper;
+use App\Settings\GeneralSettings;
 use Exception;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Log;
@@ -88,16 +89,6 @@ class CaptivePortalController extends Controller
         $name = $request->name;
         $password = $request->password;
 
-        Session::put('registration_email', $email);
-        Session::put('registration_name', $name);
-        Session::put('registration_password', $password);
-
-        $x = Session::get('registration_email', );
-        $y = Session::get('registration_name',);
-        $z = Session::get('registration_password', );
-
-        Log::info("".$x." ".$y." ".$z);
-
         // Check if customer already exists
         $existingCustomer = Customer::where('phone', $phone)->first();
         if ($existingCustomer) {
@@ -107,24 +98,75 @@ class CaptivePortalController extends Controller
             ], 422);
         }
 
-        // Generate and send OTP
-        $otpResult = $this->otpService->generateAndSend($phone, 'registration');
+        // Check OTP setting from general settings
+        $settings = app(GeneralSettings::class);
+        $otpEnabled = $settings->enable_otp_verification;
 
-        if ($otpResult['success']) {
-            // Store phone in session for OTP verification
-            Session::put('registration_phone', $phone);
+        if ($otpEnabled) {
+            // Original OTP flow - store data in session and send OTP
+            Session::put('registration_email', $email);
+            Session::put('registration_name', $name);
+            Session::put('registration_password', $password);
+
+            $x = Session::get('registration_email');
+            $y = Session::get('registration_name');
+            $z = Session::get('registration_password');
+
+            Log::info("OTP enabled - storing registration data: ".$x." ".$y." ".$z);
+
+            // Generate and send OTP
+            $otpResult = $this->otpService->generateAndSend($phone, 'registration');
+
+            if ($otpResult['success']) {
+                // Store phone in session for OTP verification
+                Session::put('registration_phone', $phone);
+
+                return response()->json([
+                    'success' => true,
+                    'message' => 'OTP sent successfully to your phone number',
+                    'expires_at' => $otpResult['expires_at'],
+                    'otp_enabled' => true
+                ]);
+            }
 
             return response()->json([
-                'success' => true,
-                'message' => 'OTP sent successfully to your phone number',
-                'expires_at' => $otpResult['expires_at']
-            ]);
-        }
+                'success' => false,
+                'message' => $otpResult['message']
+            ], 400);
+        } else {
+            // OTP disabled - create customer directly
+            Log::info("OTP disabled - creating customer directly for phone: " . $phone);
 
-        return response()->json([
-            'success' => false,
-            'message' => $otpResult['message']
-        ], 400);
+            try {
+                // Create customer immediately without OTP verification
+                $customer = Customer::create([
+                    'name' => $name,
+                    'email' => $email,
+                    'phone' => $phone,
+                    'password' => $password,
+                    'username' => $phone,
+                    'status' => 'active',
+                    'created_at' => now(),
+                ]);
+
+                // Set portal session
+                $this->setPortalSession($customer->id, $phone);
+
+                return response()->json([
+                    'success' => true,
+                    'message' => 'Registration successful! Please select a package.',
+                    'redirect_url' => route('portal.dashboard'),
+                    'otp_enabled' => false
+                ]);
+
+            } catch (Exception $e) {
+                Log::error('Direct registration failed: ' . $e->getMessage());
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Registration failed. Please try again.'
+                ], 500);
+            }
+        }
     }
 
     /**
@@ -180,7 +222,7 @@ class CaptivePortalController extends Controller
             return response()->json([
                 'success' => true,
                 'message' => 'Registration successful! Please select a package.',
-                'redirect' => route('portal.dashboard')
+                'redirect_url' => route('portal.dashboard')
             ]);
         }
 
@@ -338,6 +380,7 @@ class CaptivePortalController extends Controller
     {
         $validator = Validator::make($request->all(), [
             'phone' => 'required|string',
+            'password' => 'nullable|string', // Make password optional for OTP-based login
         ]);
 
         if ($validator->fails()) {
@@ -356,23 +399,56 @@ class CaptivePortalController extends Controller
             ], 404);
         }
 
-        // Generate OTP for login
-        $otpResult = $this->otpService->generateAndSend($request->phone, 'login');
+        // Check OTP setting from general settings
+        $settings = app(GeneralSettings::class);
+        $otpEnabled = $settings->enable_login_otp_verification;
 
-        if ($otpResult['success']) {
-            Session::put('login_phone', $request->phone);
+        if ($otpEnabled) {
+            // Original OTP-based login flow
+            $otpResult = $this->otpService->generateAndSend($request->phone, 'login');
+
+            if ($otpResult['success']) {
+                Session::put('login_phone', $request->phone);
+
+                return response()->json([
+                    'success' => true,
+                    'message' => 'OTP sent to your phone number',
+                    'expires_at' => $otpResult['expires_at'],
+                    'otp_enabled' => true
+                ]);
+            }
+
+            return response()->json([
+                'success' => false,
+                'message' => $otpResult['message']
+            ], 400);
+        } else {
+            // OTP disabled - use password-based login
+            if (!$request->password) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Password is required when OTP is disabled.'
+                ], 422);
+            }
+
+            // Verify password
+            if ($customer->password !== $request->password) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Invalid password. Please try again.'
+                ], 401);
+            }
+
+            // Login successful - set session
+            $this->setPortalSession($customer->id, $customer->phone);
 
             return response()->json([
                 'success' => true,
-                'message' => 'OTP sent to your phone number',
-                'expires_at' => $otpResult['expires_at']
+                'message' => 'Login successful!',
+                'redirect_url' => route('portal.dashboard'),
+                'otp_enabled' => false
             ]);
         }
-
-        return response()->json([
-            'success' => false,
-            'message' => $otpResult['message']
-        ], 400);
     }
 
     /**
@@ -410,7 +486,7 @@ class CaptivePortalController extends Controller
             return response()->json([
                 'success' => true,
                 'message' => 'Login successful!',
-                'redirect' => route('portal.dashboard')
+                'redirect_url' => route('portal.dashboard')
             ]);
         }
 
@@ -845,6 +921,29 @@ class CaptivePortalController extends Controller
                 'success' => false,
                 'message' => 'An error occurred while updating password. Please try again.'
             ], 500);
+        }
+    }
+
+    /**
+     * Get OTP verification status from settings
+     */
+    public function getOtpStatus()
+    {
+        try {
+            $settings = app(GeneralSettings::class);
+            
+            return response()->json([
+                'success' => true,
+                'registration_otp_enabled' => $settings->enable_otp_verification ?? true,
+                'login_otp_enabled' => $settings->enable_login_otp_verification ?? true
+            ]);
+        } catch (Exception $e) {
+            // Default to OTP enabled if there's an error
+            return response()->json([
+                'success' => true,
+                'registration_otp_enabled' => true,
+                'login_otp_enabled' => true
+            ]);
         }
     }
 }
