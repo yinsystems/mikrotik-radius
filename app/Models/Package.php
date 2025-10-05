@@ -134,35 +134,200 @@ class Package extends Model
         RadGroupCheck::cleanupGroup($groupname);
         RadGroupReply::cleanupGroup($groupname);
         
-        // Setup group checks using the exact working default template
-        // Always set bandwidth (use default 2M/5M if not specified)
-        $uploadKbps = $this->bandwidth_upload ?: 2000;   // Default 2M upload
-        $downloadKbps = $this->bandwidth_download ?: 5000; // Default 5M download
-        RadGroupCheck::setGroupBandwidth($groupname, $downloadKbps, $uploadKbps);
+        // Setup group restrictions (RadGroupCheck)
+        $this->addGroupCheckAttributes($groupname);
         
-        // Set Service-Type (matching working default: Login-User)
-        RadGroupCheck::setGroupServiceType($groupname, 'Login-User');
-        
-        // Setup group replies using the exact working default template (minimal)
-        $this->setupMinimalRadiusGroupReplies($groupname, $uploadKbps, $downloadKbps);
+        // Setup group attributes (RadGroupReply)
+        $this->addGroupReplyAttributes($groupname);
 
         return $this;
     }
 
-    private function setupMinimalRadiusGroupReplies($groupname, $uploadKbps, $downloadKbps)
+    /**
+     * Add RadGroupCheck attributes (restrictions/checks)
+     */
+    private function addGroupCheckAttributes($groupname)
     {
-        // Only create the exact 3 attributes that exist in the working default:
+        // 1. Simultaneous-Use: Concurrent session limit
+        $simultaneousUsers = $this->simultaneous_users ?: 1;
+        RadGroupCheck::create([
+            'groupname' => $groupname,
+            'attribute' => 'Simultaneous-Use',
+            'op' => ':=',
+            'value' => (string)$simultaneousUsers
+        ]);
+
+        // 2. Max-All-Session: Maximum total session time (in seconds)
+        if ($this->isTimeBased()) {
+            $maxAllSession = $this->getDurationInSeconds();
+            RadGroupCheck::create([
+                'groupname' => $groupname,
+                'attribute' => 'Max-All-Session',
+                'op' => ':=',
+                'value' => (string)$maxAllSession
+            ]);
+        }
+
+        // 3. Session-Timeout: Per-session timeout (same as Max-All-Session for simplicity)
+        if ($this->isTimeBased()) {
+            $sessionTimeout = $this->getDurationInSeconds();
+            RadGroupCheck::create([
+                'groupname' => $groupname,
+                'attribute' => 'Session-Timeout',
+                'op' => ':=',
+                'value' => (string)$sessionTimeout
+            ]);
+        }
+
+        // 4. Service-Type: Always Login-User for internet access
+        RadGroupCheck::create([
+            'groupname' => $groupname,
+            'attribute' => 'Service-Type',
+            'op' => ':=',
+            'value' => 'Login-User'
+        ]);
+
+        // 5. Data limit check (if package has data limit)
+        if ($this->data_limit) {
+            // Convert data limit to bytes
+            $dataLimitBytes = $this->getDataLimitInBytes();
+            RadGroupCheck::create([
+                'groupname' => $groupname,
+                'attribute' => 'ChilliSpot-Max-Total-Octets',
+                'op' => ':=',
+                'value' => (string)$dataLimitBytes
+            ]);
+        }
+    }
+
+    /**
+     * Add RadGroupReply attributes (response/configuration)
+     */
+    private function addGroupReplyAttributes($groupname)
+    {
+        $uploadKbps = $this->bandwidth_upload ?: 2000;   // Default 2M upload
+        $downloadKbps = $this->bandwidth_download ?: 5000; // Default 5M download
         
-        // 1. Mikrotik-Group (matching working default template)
-        RadGroupReply::setGroupMikrotikGroup($groupname, $groupname);
+        // Convert Kbps to bps for WISPr attributes
+        $uploadBps = $uploadKbps * 1000;
+        $downloadBps = $downloadKbps * 1000;
+
+        // 1. ChilliSpot-Max-Total-Octets: Data limit in bytes (if applicable)
+        if ($this->data_limit) {
+            $dataLimitBytes = $this->getDataLimitInBytes();
+            RadGroupReply::create([
+                'groupname' => $groupname,
+                'attribute' => 'ChilliSpot-Max-Total-Octets',
+                'op' => ':=',
+                'value' => (string)$dataLimitBytes
+            ]);
+        }
+
+        // 2. WISPr-Bandwidth-Max-Up: Upload speed in bits per second
+        RadGroupReply::create([
+            'groupname' => $groupname,
+            'attribute' => 'WISPr-Bandwidth-Max-Up',
+            'op' => ':=',
+            'value' => (string)$uploadBps
+        ]);
+
+        // 3. WISPr-Bandwidth-Max-Down: Download speed in bits per second
+        RadGroupReply::create([
+            'groupname' => $groupname,
+            'attribute' => 'WISPr-Bandwidth-Max-Down',
+            'op' => ':=',
+            'value' => (string)$downloadBps
+        ]);
+
+        // 4. Mikrotik-Rate-Limit: MikroTik specific rate limit
+        $mikrotikRateLimit = "{$uploadKbps}K/{$downloadKbps}K";
+        RadGroupReply::create([
+            'groupname' => $groupname,
+            'attribute' => 'Mikrotik-Rate-Limit',
+            'op' => ':=',
+            'value' => $mikrotikRateLimit
+        ]);
+
+        // 5. Idle-Timeout: 5 minutes (300 seconds) default
+        RadGroupReply::create([
+            'groupname' => $groupname,
+            'attribute' => 'Idle-Timeout',
+            'op' => ':=',
+            'value' => '300'
+        ]);
+
+        // 6. Mikrotik-Address-List: Traffic management (based on package type)
+        $addressList = $this->is_trial ? 'trial_users' : 'paid_users';
+        RadGroupReply::create([
+            'groupname' => $groupname,
+            'attribute' => 'Mikrotik-Address-List',
+            'op' => ':=',
+            'value' => $addressList
+        ]);
+
+        // 7. Reply-Message: Welcome message
+        RadGroupReply::create([
+            'groupname' => $groupname,
+            'attribute' => 'Reply-Message',
+            'op' => ':=',
+            'value' => "Welcome to {$this->name} package, %{User-Name}!"
+        ]);
+
+        // 8. Mikrotik-Group: Group name for MikroTik management
+        RadGroupReply::create([
+            'groupname' => $groupname,
+            'attribute' => 'Mikrotik-Group',
+            'op' => ':=',
+            'value' => $groupname
+        ]);
+    }
+
+    /**
+     * Get data limit in bytes
+     */
+    private function getDataLimitInBytes()
+    {
+        if (!$this->data_limit) {
+            return 0;
+        }
+
+        // Assuming data_limit is stored in MB
+        return $this->data_limit * 1024 * 1024;
+    }
+
+    /**
+     * Check if package is time-based (has duration)
+     */
+    private function isTimeBased()
+    {
+        return !empty($this->duration_type) && !empty($this->duration_value);
+    }
+
+    /**
+     * Get package duration in seconds
+     */
+    private function getDurationInSeconds()
+    {
+        if (!$this->isTimeBased()) {
+            return 0;
+        }
+
+        $value = $this->duration_value;
         
-        // 2. Mikrotik-Rate-Limit (matching working default template)
-        RadGroupReply::setGroupBandwidth($groupname, $uploadKbps, $downloadKbps);
-        
-        // 3. Reply-Message (matching working default template)
-        RadGroupReply::setGroupReplyMessage($groupname, "Welcome, %{User-Name}");
-        
-        return $this;
+        switch ($this->duration_type) {
+            case 'hourly':
+                return $value * 3600;
+            case 'daily':
+                return $value * 86400;
+            case 'weekly':
+                return $value * 604800;
+            case 'monthly':
+                return $value * 2592000; // 30 days
+            case 'yearly':
+                return $value * 31536000; // 365 days
+            default:
+                return 0;
+        }
     }
 
     public function updateRadiusGroup()
