@@ -12,8 +12,8 @@ class Package extends Model
     protected $fillable = [
         'name',
         'description',
-        'duration_type', // 'hourly', 'daily', 'weekly', 'monthly', 'trial'
-        'duration_value', // number of hours/days/weeks/months
+        'duration_type', // 'minutely', 'hourly', 'daily', 'weekly', 'monthly', 'trial'
+        'duration_value', // number of minutes/hours/days/weeks/months
         'price',
         'bandwidth_upload', // in Kbps
         'bandwidth_download', // in Kbps
@@ -55,6 +55,7 @@ class Package extends Model
     public function getDurationDisplayAttribute()
     {
         return match($this->duration_type) {
+            'minutely' => $this->duration_value . ' Minute' . ($this->duration_value > 1 ? 's' : ''),
             'hourly' => $this->duration_value . ' Hour' . ($this->duration_value > 1 ? 's' : ''),
             'daily' => $this->duration_value . ' Day' . ($this->duration_value > 1 ? 's' : ''),
             'weekly' => $this->duration_value . ' Week' . ($this->duration_value > 1 ? 's' : ''),
@@ -285,6 +286,8 @@ class Package extends Model
         $value = $this->duration_value;
         
         switch ($this->duration_type) {
+            case 'minutely':
+                return $value * 60;
             case 'hourly':
                 return $value * 3600;
             case 'daily':

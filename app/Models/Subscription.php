@@ -877,6 +877,7 @@ class Subscription extends Model
     {
         // Calculate session duration in seconds based on package
         $totalSeconds = match($this->package->duration_type) {
+            'minutely' => $this->package->duration_value * 60,
             'hourly' => $this->package->duration_value * 3600,
             'daily' => $this->package->duration_value * 24 * 3600,
             'weekly' => $this->package->duration_value * 7 * 24 * 3600,
@@ -934,6 +935,7 @@ class Subscription extends Model
         $start = $startFrom ?? now();
         
         return match($package->duration_type) {
+            'minutely' => $start->addMinutes($package->duration_value),
             'hourly' => $start->addHours($package->duration_value),
             'daily' => $start->addDays($package->duration_value),
             'weekly' => $start->addWeeks($package->duration_value),

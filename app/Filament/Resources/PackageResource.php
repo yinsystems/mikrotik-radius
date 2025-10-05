@@ -72,6 +72,7 @@ class PackageResource extends Resource
                                 Forms\Components\Select::make('duration_type')
                                     ->required()
                                     ->options([
+                                        'minutely' => 'Minutely',
                                         'hourly' => 'Hourly',
                                         'daily' => 'Daily',
                                         'weekly' => 'Weekly',
@@ -89,6 +90,7 @@ class PackageResource extends Resource
                                     ->helperText(function (callable $get) {
                                         $type = $get('duration_type');
                                         return match($type) {
+                                            'minutely' => 'Number of minutes',
                                             'hourly' => 'Number of hours',
                                             'daily' => 'Number of days',
                                             'weekly' => 'Number of weeks',
@@ -182,6 +184,7 @@ class PackageResource extends Resource
                     ->label('Duration')
                     ->color(fn (string $state): string => match (true) {
                         str_contains(strtolower($state), 'trial') => 'warning',
+                        str_contains(strtolower($state), 'minute') => 'secondary',
                         str_contains(strtolower($state), 'hour') => 'info',
                         str_contains(strtolower($state), 'day') => 'success',
                         str_contains(strtolower($state), 'week') => 'primary',
@@ -262,6 +265,7 @@ class PackageResource extends Resource
             ->filters([
                 Tables\Filters\SelectFilter::make('duration_type')
                     ->options([
+                        'minutely' => 'Minutely',
                         'hourly' => 'Hourly',
                         'daily' => 'Daily',
                         'weekly' => 'Weekly',

@@ -7,6 +7,7 @@ use Filament\Tables;
 use Filament\Tables\Table;
 use Filament\Widgets\TableWidget as BaseWidget;
 use Illuminate\Database\Eloquent\Builder;
+use Illuminate\Support\Facades\DB;
 
 class TopUsers extends BaseWidget
 {
@@ -21,19 +22,21 @@ class TopUsers extends BaseWidget
                 DataUsage::query()
                     ->thisMonth()
                     ->with(['subscription.customer', 'subscription.package'])
-                    ->select('username')
-                    ->selectRaw('
-                        SUM(total_bytes) as total_usage,
-                        SUM(session_count) as total_sessions,
-                        SUM(session_time) as total_time,
-                        AVG(session_time / NULLIF(session_count, 0)) as avg_session_duration,
-                        MAX(total_bytes) as peak_daily_usage,
-                        COUNT(*) as usage_days
-                    ')
+                    ->select([
+                        'username',
+                        DB::raw('ROW_NUMBER() OVER (ORDER BY SUM(total_bytes) DESC) as id'),
+                        DB::raw('SUM(total_bytes) as total_usage'),
+                        DB::raw('SUM(session_count) as total_sessions'),
+                        DB::raw('SUM(session_time) as total_time'),
+                        DB::raw('AVG(session_time / NULLIF(session_count, 0)) as avg_session_duration'),
+                        DB::raw('MAX(total_bytes) as peak_daily_usage'),
+                        DB::raw('COUNT(*) as usage_days')
+                    ])
                     ->groupBy('username')
                     ->orderByDesc('total_usage')
                     ->limit(20)
             )
+            ->recordKey('username')
             ->columns([
                 Tables\Columns\TextColumn::make('username')
                     ->label('Username')
