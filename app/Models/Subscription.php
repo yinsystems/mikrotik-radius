@@ -228,7 +228,8 @@ class Subscription extends Model
     {
         // Create authentication entry
         RadCheck::setPassword($this->username, $this->password);
-        RadCheck::setExpiration($this->username, $this->expires_at->format('M d Y H:i'));
+        // Use proper RADIUS expiration format: "Mmm DD YYYY HH:MM:SS"
+        RadCheck::setExpiration($this->username, $this->expires_at->format('M d Y H:i:s'));
         
         // Set simultaneous use limit
         if ($this->package->simultaneous_users) {
@@ -263,8 +264,8 @@ class Subscription extends Model
     
     public function updateRadiusUser()
     {
-        // Update expiration
-        RadCheck::setExpiration($this->username, $this->expires_at->format('M d Y H:i'));
+        // Update expiration (use proper RADIUS format)
+        RadCheck::setExpiration($this->username, $this->expires_at->format('M d Y H:i:s'));
         
         // Update password if changed
         RadCheck::setPassword($this->username, $this->password);
