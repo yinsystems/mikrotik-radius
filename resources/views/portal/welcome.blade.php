@@ -259,7 +259,7 @@ $settings= new \App\Settings\GeneralSettings();
                     <div class="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
                         <div>
                             <h4 class="font-medium text-gray-900">{{ $package->name }}</h4>
-                            <p class="text-sm text-gray-600">{{ $package->data_limit }}GB - {{ $package->validity_days }} days</p>
+                            <p class="text-sm text-gray-600">{{ $package->data_limit_display }} - {{ $package->duration_display }}</p>
                         </div>
                         <div class="text-right">
                             <p class="font-bold text-green-600">GH₵{{ number_format($package->price, 2) }}</p>

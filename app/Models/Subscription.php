@@ -24,14 +24,18 @@ class Subscription extends Model
         'is_trial',
         'auto_renew',
         'renewal_package_id', // package to renew with
-        'notes'
+        'notes',
+        'expiry_warning_sent_at',
+        'expiry_notification_sent'
     ];
 
     protected $casts = [
         'starts_at' => 'datetime',
         'expires_at' => 'datetime',
+        'expiry_warning_sent_at' => 'datetime',
         'is_trial' => 'boolean',
         'auto_renew' => 'boolean',
+        'expiry_notification_sent' => 'boolean',
         'data_used' => 'integer',
         'sessions_used' => 'integer'
     ];
@@ -769,27 +773,54 @@ class Subscription extends Model
 
     public static function sendExpirationNotices()
     {
-        // Send single notification 24 hours before expiration (configurable)
-        $warningHours = config('notification.types.expiration_warning.warning_hours', 24);
-        
-        $expiringSubscriptions = self::where('status', 'active')
-                                   ->whereBetween('expires_at', [
-                                       now()->addHours($warningHours - 1), 
-                                       now()->addHours($warningHours + 1)
-                                   ])
-                                   ->with(['customer', 'package'])
-                                   ->get();
-
+        // Dynamic warning time based on package duration type
         $notificationsSent = 0;
         $notificationService = app(\App\Services\NotificationService::class);
+        
+        // Get active subscriptions with package info that haven't been notified yet
+        $activeSubscriptions = self::where('status', 'active')
+                                 ->where('expiry_notification_sent', false)
+                                 ->with(['customer', 'package'])
+                                 ->get();
+
+        $expiringSubscriptions = collect();
+
+        foreach ($activeSubscriptions as $subscription) {
+            if (!$subscription->customer || !$subscription->package || $subscription->expires_at->isPast()) {
+                continue;
+            }
+
+            $package = $subscription->package;
+            $hoursUntilExpiry = now()->diffInHours($subscription->expires_at, false);
+            $minutesUntilExpiry = now()->diffInMinutes($subscription->expires_at, false);
+            
+            // Determine if we should send notification based on package type
+            $shouldNotify = false;
+            
+            if ($package->duration_type === 'minutely') {
+                // For minute packages: notify once when 20% of time remains (but not less than 1 minute)
+                $warningMinutes = max(1, $package->duration_value * 0.2);
+                $shouldNotify = $minutesUntilExpiry <= $warningMinutes && $minutesUntilExpiry > 0;
+            } elseif ($package->duration_type === 'hourly') {
+                // For hourly packages: notify once when 1 hour before or 25% remains (whichever is less)
+                $warningHours = min(1, $package->duration_value * 0.25);
+                $shouldNotify = $hoursUntilExpiry <= $warningHours && $hoursUntilExpiry > 0;
+            } else {
+                // For daily/weekly/monthly packages: notify 24 hours before (original logic)
+                $warningHours = config('notification.types.expiration_warning.warning_hours', 24);
+                $shouldNotify = $hoursUntilExpiry <= $warningHours && $hoursUntilExpiry > 0;
+            }
+
+            if ($shouldNotify) {
+                $expiringSubscriptions->push($subscription);
+            }
+        }
 
         foreach ($expiringSubscriptions as $subscription) {
             try {
-                if (!$subscription->customer || !$subscription->package) {
-                    continue;
-                }
-
-                $hoursRemaining = now()->diffInHours($subscription->expires_at);
+                $timeRemaining = $subscription->expires_at->diffForHumans();
+                $minutesRemaining = now()->diffInMinutes($subscription->expires_at, false);
+                $hoursRemaining = now()->diffInHours($subscription->expires_at, false);
                 
                 $notificationService->sendExpirationWarning([
                     'name' => $subscription->customer->name,
@@ -799,11 +830,20 @@ class Subscription extends Model
                     'package_name' => $subscription->package->name,
                     'expires_at' => $subscription->expires_at->format('Y-m-d H:i:s'),
                     'hours_remaining' => $hoursRemaining,
+                    'minutes_remaining' => $minutesRemaining,
+                    'time_remaining' => $timeRemaining,
+                    'duration_type' => $subscription->package->duration_type,
+                ]);
+
+                // Mark notification as sent to prevent duplicates
+                $subscription->update([
+                    'expiry_notification_sent' => true,
+                    'expiry_warning_sent_at' => now()
                 ]);
 
                 $notificationsSent++;
                 
-                \Log::info("Expiration warning sent for subscription {$subscription->id}");
+                \Log::info("Expiration warning sent for subscription {$subscription->id} ({$subscription->package->duration_type} package, {$timeRemaining} remaining)");
             } catch (\Exception $e) {
                 \Log::error("Failed to send expiration warning for subscription {$subscription->id}: " . $e->getMessage());
             }

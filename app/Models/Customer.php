@@ -413,6 +413,7 @@ class Customer extends Model
     private function calculateExpiration($package)
     {
         return match ($package->duration_type) {
+            'minutely' => now()->addMinutes($package->duration_value),
             'hourly' => now()->addHours($package->duration_value),
             'daily' => now()->addDays($package->duration_value),
             'weekly' => now()->addWeeks($package->duration_value),

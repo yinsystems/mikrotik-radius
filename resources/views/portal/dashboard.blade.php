@@ -95,7 +95,23 @@ $settings = new \App\Settings\GeneralSettings();
                     <!-- Time Remaining -->
                     @php
                         $timeRemaining = $activeSubscription->expires_at->diffForHumans(null, false, true);
-                        $isExpiringSoon = $activeSubscription->expires_at->diffInHours() < 24;
+                        
+                        // Determine expiring soon based on package duration type
+                        $package = $activeSubscription->package;
+                        $isExpiringSoon = false;
+                        
+                        if ($package->duration_type === 'minutely') {
+                            // For minute packages, consider expiring soon if less than 20% of duration remains
+                            $totalMinutes = $package->duration_value;
+                            $remainingMinutes = $activeSubscription->expires_at->diffInMinutes();
+                            $isExpiringSoon = $remainingMinutes < ($totalMinutes * 0.2);
+                        } elseif ($package->duration_type === 'hourly') {
+                            // For hourly packages, expiring soon if less than 1 hour remains
+                            $isExpiringSoon = $activeSubscription->expires_at->diffInHours() < 1;
+                        } else {
+                            // For daily/weekly/monthly packages, expiring soon if less than 24 hours remains
+                            $isExpiringSoon = $activeSubscription->expires_at->diffInHours() < 24;
+                        }
                     @endphp
                     <div class="mt-3 pt-3 border-t border-green-200">
                         <div class="flex items-center justify-between">
