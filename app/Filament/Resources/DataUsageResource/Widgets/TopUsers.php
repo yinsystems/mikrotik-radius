@@ -36,7 +36,6 @@ class TopUsers extends BaseWidget
                     ->orderByDesc('total_usage')
                     ->limit(20)
             )
-            ->recordKey('username')
             ->columns([
                 Tables\Columns\TextColumn::make('username')
                     ->label('Username')
@@ -193,5 +192,11 @@ class TopUsers extends BaseWidget
     protected function getTableRecordsPerPageSelectOptions(): array
     {
         return [10, 25, 50];
+    }
+
+    public function getTableRecordKey($record): string
+    {
+        // Use username as the unique identifier for grouped records
+        return $record->username ?? (string) ($record->id ?? uniqid());
     }
 }
