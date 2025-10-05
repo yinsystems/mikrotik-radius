@@ -112,6 +112,46 @@ class RadCheck extends Model
         );
     }
 
+    public static function redirectUserForExpiration($username)
+    {
+        // Remove any existing blocking
+        self::where('username', $username)
+            ->where('attribute', 'Auth-Type')
+            ->where('value', 'Reject')
+            ->delete();
+        
+        // Set very restrictive bandwidth (1 kbps) to allow minimal access
+        \App\Models\RadReply::updateOrCreate(
+            ['username' => $username, 'attribute' => 'WISPr-Bandwidth-Max-Down'],
+            ['op' => ':=', 'value' => '1024'] // 1 kbps
+        );
+        
+        \App\Models\RadReply::updateOrCreate(
+            ['username' => $username, 'attribute' => 'WISPr-Bandwidth-Max-Up'],
+            ['op' => ':=', 'value' => '1024'] // 1 kbps
+        );
+        
+        // Set short session timeout (5 minutes)
+        \App\Models\RadReply::updateOrCreate(
+            ['username' => $username, 'attribute' => 'Session-Timeout'],
+            ['op' => ':=', 'value' => '300'] // 5 minutes
+        );
+        
+        // Set redirection URL to payment portal
+        \App\Models\RadReply::updateOrCreate(
+            ['username' => $username, 'attribute' => 'WISPr-Redirection-URL'],
+            ['op' => ':=', 'value' => 'https://jaynet.vasgh.com/portal']
+        );
+        
+        // Set informative message
+        \App\Models\RadReply::updateOrCreate(
+            ['username' => $username, 'attribute' => 'Reply-Message'],
+            ['op' => ':=', 'value' => 'Your package has expired. You will be redirected to renew your subscription.']
+        );
+        
+        return true;
+    }
+
     public static function unblockUser($username)
     {
         // Remove Auth-Type Reject
@@ -120,9 +160,15 @@ class RadCheck extends Model
                   ->where('value', 'Reject')
                   ->delete();
         
-        // Remove any Reply-Message
+        // Remove any restrictive Reply attributes for expired users
         \App\Models\RadReply::where('username', $username)
-               ->where('attribute', 'Reply-Message')
+               ->whereIn('attribute', [
+                   'Reply-Message',
+                   'WISPr-Redirection-URL',
+                   'WISPr-Bandwidth-Max-Down',
+                   'WISPr-Bandwidth-Max-Up',
+                   'Session-Timeout'
+               ])
                ->delete();
         
         return $result;

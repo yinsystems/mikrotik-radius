@@ -319,8 +319,8 @@ class Subscription extends Model
                 if (!$this->isExpired()) {
                     RadCheck::unblockUser($this->username);
                 } else {
-                    // Block user authentication for expired subscription
-                    RadCheck::blockUserForExpiration($this->username);
+                    // Redirect user to payment portal instead of blocking
+                    RadCheck::redirectUserForExpiration($this->username);
                     
                     // Immediately disconnect active sessions via MikroTik API
                     $this->disconnectActiveSessions();
@@ -336,7 +336,7 @@ class Subscription extends Model
                 break;
                 
             case 'expired':
-                RadCheck::blockUserForExpiration($this->username);
+                RadCheck::redirectUserForExpiration($this->username);
                 
                 // Disconnect active sessions for expired users
                 $this->disconnectActiveSessions();
