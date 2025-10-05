@@ -250,6 +250,52 @@ class MikroTikService
     }
 
     /**
+     * Disconnect all active sessions for a specific username
+     */
+    public function disconnectUserByUsername($username)
+    {
+        try {
+            if (!$this->isConnected) {
+                $this->connect();
+            }
+
+            // Get all active sessions
+            $sessions = $this->getActiveSessions();
+            $disconnectedSessions = 0;
+
+            foreach ($sessions as $session) {
+                // Check if this session belongs to the target user
+                if (isset($session['user']) && $session['user'] === $username) {
+                    try {
+                        $this->disconnectUser($session['.id']);
+                        $disconnectedSessions++;
+                    } catch (Exception $e) {
+                        Log::warning('Failed to disconnect session for user', [
+                            'username' => $username,
+                            'session_id' => $session['.id'],
+                            'error' => $e->getMessage()
+                        ]);
+                    }
+                }
+            }
+
+            Log::info('User sessions disconnected by username', [
+                'username' => $username,
+                'sessions_disconnected' => $disconnectedSessions
+            ]);
+
+            return $disconnectedSessions;
+
+        } catch (Exception $e) {
+            Log::error('Failed to disconnect user by username', [
+                'username' => $username,
+                'error' => $e->getMessage()
+            ]);
+            throw $e;
+        }
+    }
+
+    /**
      * Get user profiles
      */
     public function getUserProfiles()

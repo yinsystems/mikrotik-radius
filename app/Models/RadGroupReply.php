@@ -130,17 +130,6 @@ class RadGroupReply extends Model
         );
     }
 
-    public static function setGroupMikrotikGroup($groupname, $mikrotikGroup = null)
-    {
-        // If no specific MikroTik group provided, use the RADIUS group name
-        $mikrotikGroup = $mikrotikGroup ?? $groupname;
-        
-        return self::updateOrCreate(
-            ['groupname' => $groupname, 'attribute' => 'Mikrotik-Group'],
-            ['op' => ':=', 'value' => $mikrotikGroup]
-        );
-    }
-
     public static function setGroupReplyMessage($groupname, $message = null)
     {
         // Default welcome message with username placeholder
@@ -193,8 +182,7 @@ class RadGroupReply extends Model
         self::setGroupServiceType($groupname, 'Framed-User');
         self::setGroupFramedProtocol($groupname, 'PPP');
         
-        // Set MikroTik-specific attributes
-        self::setGroupMikrotikGroup($groupname, $groupname);
+        // Set reply message
         self::setGroupReplyMessage($groupname, "Welcome to {$package->name}, %{User-Name}");
 
         // Set Mikrotik address list for package categorization
@@ -211,8 +199,7 @@ class RadGroupReply extends Model
         // Set default bandwidth (matching your screenshot: 2M/5M)
         self::setGroupBandwidth($groupname, 2000, 5000); // 2M upload, 5M download
         
-        // Set MikroTik-specific attributes
-        self::setGroupMikrotikGroup($groupname, 'default');
+        // Set reply message
         self::setGroupReplyMessage($groupname, 'Welcome, %{User-Name}');
         
         // Set basic service attributes

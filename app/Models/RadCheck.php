@@ -77,20 +77,55 @@ class RadCheck extends Model
         );
     }
 
-    public static function blockUser($username)
+    public static function blockUser($username, $reason = null)
     {
-        return self::updateOrCreate(
+        // Set Auth-Type to Reject
+        $result = self::updateOrCreate(
             ['username' => $username, 'attribute' => 'Auth-Type'],
             ['op' => ':=', 'value' => 'Reject']
+        );
+        
+        // Add Reply-Message if reason provided
+        if ($reason) {
+            \App\Models\RadReply::updateOrCreate(
+                ['username' => $username, 'attribute' => 'Reply-Message'],
+                ['op' => ':=', 'value' => $reason]
+            );
+        }
+        
+        return $result;
+    }
+
+    public static function blockUserForExpiration($username)
+    {
+        return self::blockUser(
+            $username, 
+            'Your package has expired. Please login to your account and subscribe to a new package to continue.'
+        );
+    }
+
+    public static function blockUserForSuspension($username)
+    {
+        return self::blockUser(
+            $username, 
+            'Your account has been suspended. Please contact support for assistance.'
         );
     }
 
     public static function unblockUser($username)
     {
-        return self::where('username', $username)
+        // Remove Auth-Type Reject
+        $result = self::where('username', $username)
                   ->where('attribute', 'Auth-Type')
                   ->where('value', 'Reject')
                   ->delete();
+        
+        // Remove any Reply-Message
+        \App\Models\RadReply::where('username', $username)
+               ->where('attribute', 'Reply-Message')
+               ->delete();
+        
+        return $result;
     }
 
     public static function setLoginTime($username, $timeRestriction)

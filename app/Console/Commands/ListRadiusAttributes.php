@@ -37,7 +37,7 @@ class ListRadiusAttributes extends Command
         $this->line("│ Idle-Timeout            │ :=  │ Idle timeout: 300 seconds (5 minutes)  │");
         $this->line("│ Mikrotik-Address-List   │ :=  │ 'trial_users' or 'paid_users'           │");
         $this->line("│ Reply-Message           │ :=  │ Welcome message with package name       │");
-        $this->line("│ Mikrotik-Group          │ :=  │ Group name for MikroTik management      │");
+
         $this->line("└─────────────────────────┴─────┴─────────────────────────────────────────┘");
         
         $this->info("\n👤 RadCheck (Individual User Attributes)");
@@ -90,7 +90,7 @@ class ListRadiusAttributes extends Command
         $this->line("✓ Session timeout and idle timeout");
         $this->line("✓ Traffic management (Mikrotik-Address-List)");
         $this->line("✓ User-friendly welcome messages");
-        $this->line("✓ MikroTik integration (Mikrotik-Group, Mikrotik-Rate-Limit)");
+        $this->line("✓ MikroTik integration (Mikrotik-Rate-Limit, Mikrotik-Address-List)");
         
         $this->info("\n🔄 PACKAGE CREATION FLOW");
         $this->info("─────────────────────────");

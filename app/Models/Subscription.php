@@ -6,6 +6,8 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Carbon\Carbon;
 use Illuminate\Support\Str;
+use App\Services\MikroTikService;
+use Illuminate\Support\Facades\Log;
 
 class Subscription extends Model
 {
@@ -229,6 +231,11 @@ class Subscription extends Model
         // Create authentication entry
         RadCheck::setPassword($this->username, $this->password);
         
+        // Set Max-All-Session for cumulative time tracking (individual user level)
+        if ($this->package->isTimeBased()) {
+            $this->setUserMaxAllSession();
+        }
+        
         // Set individual user replies
         if ($this->package->bandwidth_upload && $this->package->bandwidth_download) {
             RadReply::setBandwidthLimit($this->username, $this->package->bandwidth_upload, $this->package->bandwidth_download);
@@ -258,8 +265,17 @@ class Subscription extends Model
     
     public function updateRadiusUser()
     {
-        // Remove individual expiration - rely on package group Max-All-Session instead
+        // Remove individual expiration
         RadCheck::removeExpiration($this->username);
+        
+        // Update Max-All-Session for cumulative time tracking
+        RadCheck::where('username', $this->username)
+                ->where('attribute', 'Max-All-Session')
+                ->delete();
+        
+        if ($this->package->isTimeBased()) {
+            $this->setUserMaxAllSession();
+        }
         
         // Update password if changed
         RadCheck::setPassword($this->username, $this->password);
@@ -303,18 +319,31 @@ class Subscription extends Model
                 if (!$this->isExpired()) {
                     RadCheck::unblockUser($this->username);
                 } else {
-                    RadCheck::blockUser($this->username);
+                    // Block user authentication for expired subscription
+                    RadCheck::blockUserForExpiration($this->username);
+                    
+                    // Immediately disconnect active sessions via MikroTik API
+                    $this->disconnectActiveSessions();
                 }
                 break;
                 
             case 'suspended':
             case 'blocked':
+                RadCheck::blockUserForSuspension($this->username);
+                
+                // Disconnect active sessions for suspended/blocked users
+                $this->disconnectActiveSessions();
+                break;
+                
             case 'expired':
-                RadCheck::blockUser($this->username);
+                RadCheck::blockUserForExpiration($this->username);
+                
+                // Disconnect active sessions for expired users
+                $this->disconnectActiveSessions();
                 break;
                 
             case 'pending':
-                RadCheck::blockUser($this->username);
+                RadCheck::blockUser($this->username, 'Your account is pending activation. Please wait for approval.');
                 break;
         }
         
@@ -838,6 +867,65 @@ class Subscription extends Model
             return sprintf('%dm %ds', $minutes, $remainingSeconds);
         } else {
             return sprintf('%ds', $seconds);
+        }
+    }
+    
+    /**
+     * Set Max-All-Session for cumulative time tracking
+     */
+    private function setUserMaxAllSession()
+    {
+        // Calculate session duration in seconds based on package
+        $totalSeconds = match($this->package->duration_type) {
+            'hourly' => $this->package->duration_value * 3600,
+            'daily' => $this->package->duration_value * 24 * 3600,
+            'weekly' => $this->package->duration_value * 7 * 24 * 3600,
+            'monthly' => $this->package->duration_value * 30 * 24 * 3600,
+            'trial' => $this->package->trial_duration_hours * 3600,
+            default => 24 * 3600 // Default to 1 day
+        };
+        
+        // Set Max-All-Session for this user (cumulative across all sessions)
+        RadCheck::create([
+            'username' => $this->username,
+            'attribute' => 'Max-All-Session',
+            'op' => ':=',
+            'value' => (string)$totalSeconds
+        ]);
+    }
+
+    /**
+     * Disconnect active MikroTik sessions for this user
+     */
+    private function disconnectActiveSessions()
+    {
+        try {
+            // Initialize MikroTik service
+            $mikrotikService = new MikroTikService();
+            
+            // Disconnect all active sessions for this user
+            $disconnectedSessions = $mikrotikService->disconnectUserByUsername($this->username);
+            
+            Log::info('Disconnected active sessions for subscription', [
+                'subscription_id' => $this->id,
+                'username' => $this->username,
+                'status' => $this->status,
+                'sessions_disconnected' => $disconnectedSessions
+            ]);
+            
+            return $disconnectedSessions;
+            
+        } catch (\Exception $e) {
+            Log::error('Failed to disconnect active sessions for subscription', [
+                'subscription_id' => $this->id,
+                'username' => $this->username,
+                'status' => $this->status,
+                'error' => $e->getMessage()
+            ]);
+            
+            // Don't throw the exception as this is not a critical failure
+            // The RADIUS blocking will still prevent new sessions
+            return 0;
         }
     }
     

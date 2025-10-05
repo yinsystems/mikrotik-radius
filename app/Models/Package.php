@@ -157,18 +157,7 @@ class Package extends Model
             'value' => (string)$simultaneousUsers
         ]);
 
-        // 2. Session-Timeout: Per-session timeout
-        if ($this->isTimeBased()) {
-            $sessionTimeout = $this->getDurationInSeconds();
-            RadGroupCheck::create([
-                'groupname' => $groupname,
-                'attribute' => 'Session-Timeout',
-                'op' => ':=',
-                'value' => (string)$sessionTimeout
-            ]);
-        }
-
-        // 4. Service-Type: Always Login-User for internet access
+        // 2. Service-Type: Always Login-User for internet access
         RadGroupCheck::create([
             'groupname' => $groupname,
             'attribute' => 'Service-Type',
@@ -261,14 +250,6 @@ class Package extends Model
             'op' => ':=',
             'value' => "Welcome to {$this->name} package, %{User-Name}!"
         ]);
-
-        // 8. Mikrotik-Group: Group name for MikroTik management
-        RadGroupReply::create([
-            'groupname' => $groupname,
-            'attribute' => 'Mikrotik-Group',
-            'op' => ':=',
-            'value' => $groupname
-        ]);
     }
 
     /**
@@ -287,7 +268,7 @@ class Package extends Model
     /**
      * Check if package is time-based (has duration)
      */
-    private function isTimeBased()
+    public function isTimeBased()
     {
         return !empty($this->duration_type) && !empty($this->duration_value);
     }
