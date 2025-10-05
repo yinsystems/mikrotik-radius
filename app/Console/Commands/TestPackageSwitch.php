@@ -8,6 +8,7 @@ use App\Models\Package;
 use App\Models\Subscription;
 use App\Models\RadUserGroup;
 use App\Models\RadGroupCheck;
+use App\Models\RadCheck;
 
 class TestPackageSwitch extends Command
 {
@@ -35,6 +36,7 @@ class TestPackageSwitch extends Command
 
         $this->info("=== BEFORE PACKAGE SWITCH ===");
         $this->showUserGroups($customer->username);
+        $this->showUserAttributes($customer->username);
         $this->showPackageAttributes($customer->username);
 
         // Create new subscription (simulating purchase)
@@ -44,6 +46,7 @@ class TestPackageSwitch extends Command
 
         $this->info("\n=== AFTER PACKAGE SWITCH ===");
         $this->showUserGroups($customer->username);
+        $this->showUserAttributes($customer->username);
         $this->showPackageAttributes($customer->username);
 
         return 0;

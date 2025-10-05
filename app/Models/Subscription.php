@@ -228,8 +228,9 @@ class Subscription extends Model
     {
         // Create authentication entry
         RadCheck::setPassword($this->username, $this->password);
-        // Remove individual expiration - rely on package group Max-All-Session instead
-        RadCheck::removeExpiration($this->username);
+        
+        // Set Max-All-Session based on package duration
+        $this->setUserMaxAllSession();
         
         // Set simultaneous use limit
         if ($this->package->simultaneous_users) {
@@ -846,6 +847,22 @@ class Subscription extends Model
         } else {
             return sprintf('%ds', $seconds);
         }
+    }
+    
+    private function setUserMaxAllSession()
+    {
+        // Calculate session duration in seconds based on package
+        $totalSeconds = match($this->package->duration_type) {
+            'hourly' => $this->package->duration_value * 3600,
+            'daily' => $this->package->duration_value * 24 * 3600,
+            'weekly' => $this->package->duration_value * 7 * 24 * 3600,
+            'monthly' => $this->package->duration_value * 30 * 24 * 3600,
+            'trial' => $this->package->trial_duration_hours * 3600,
+            default => 24 * 3600 // Default to 1 day
+        };
+        
+        // Set Max-All-Session for this user
+        RadCheck::setUserMaxAllSession($this->username, $totalSeconds);
     }
     
     private function calculateExpiration($package, $startFrom = null)

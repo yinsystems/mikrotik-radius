@@ -77,14 +77,6 @@ class RadGroupCheck extends Model
         );
     }
 
-    public static function setGroupMaxAllSession($groupname, $seconds)
-    {
-        return self::updateOrCreate(
-            ['groupname' => $groupname, 'attribute' => 'Max-All-Session'],
-            ['op' => ':=', 'value' => $seconds]
-        );
-    }
-
     public static function setGroupBandwidth($groupname, $downloadKbps = null, $uploadKbps = null)
     {
         // For MikroTik, we should use Mikrotik-Rate-Limit instead of WISPr attributes

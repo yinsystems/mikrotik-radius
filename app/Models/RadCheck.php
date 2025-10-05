@@ -57,6 +57,11 @@ class RadCheck extends Model
         );
     }
 
+    public static function setUserMaxAllSession($username, $seconds)
+    {
+        return self::setMaxAllSession($username, $seconds);
+    }
+
     public static function removeExpiration($username)
     {
         return self::where('username', $username)
