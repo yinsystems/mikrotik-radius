@@ -1,0 +1,179 @@
+<?php
+
+return [
+    /*
+    |--------------------------------------------------------------------------
+    | Notification Configuration
+    |--------------------------------------------------------------------------
+    |
+    | Configuration for customer notification system supporting SMS and Email
+    |
+    */
+
+    /*
+    |--------------------------------------------------------------------------
+    | Default Notification Channels
+    |--------------------------------------------------------------------------
+    |
+    | Available channels: 'sms', 'email', 'both'
+    | This controls which notification method(s) to use by default
+    |
+    */
+    'default_channels' => env('NOTIFICATION_CHANNELS', 'both'),
+
+    /*
+    |--------------------------------------------------------------------------
+    | Channel Specific Settings
+    |--------------------------------------------------------------------------
+    */
+    'sms' => [
+        'enabled' => env('NOTIFICATION_SMS_ENABLED', true),
+        'service' => env('SMS_DRIVER', 'arkesel'),
+        'fallback_to_email' => env('NOTIFICATION_SMS_FALLBACK_EMAIL', true),
+    ],
+
+    'email' => [
+        'enabled' => env('NOTIFICATION_EMAIL_ENABLED', true),
+        'from_address' => env('MAIL_FROM_ADDRESS', 'noreply@mikrotik.local'),
+        'from_name' => env('MAIL_FROM_NAME', 'MikroTik RADIUS'),
+        'fallback_to_sms' => env('NOTIFICATION_EMAIL_FALLBACK_SMS', false),
+    ],
+
+    /*
+    |--------------------------------------------------------------------------
+    | Notification Type Specific Settings
+    |--------------------------------------------------------------------------
+    |
+    | Override default channels for specific notification types
+    |
+    */
+    'types' => [
+        'welcome' => [
+            'channels' => env('NOTIFICATION_WELCOME_CHANNELS', null), // null = use default
+            'sms_enabled' => env('NOTIFICATION_WELCOME_SMS', true),
+            'email_enabled' => env('NOTIFICATION_WELCOME_EMAIL', true),
+        ],
+        'trial_assignment' => [
+            'channels' => env('NOTIFICATION_TRIAL_CHANNELS', null),
+            'sms_enabled' => env('NOTIFICATION_TRIAL_SMS', true),
+            'email_enabled' => env('NOTIFICATION_TRIAL_EMAIL', true),
+        ],
+        'setup_instructions' => [
+            'channels' => env('NOTIFICATION_SETUP_CHANNELS', null),
+            'sms_enabled' => env('NOTIFICATION_SETUP_SMS', true),
+            'email_enabled' => env('NOTIFICATION_SETUP_EMAIL', true),
+        ],
+        'payment_success' => [
+            'channels' => env('NOTIFICATION_PAYMENT_SUCCESS_CHANNELS', null),
+            'sms_enabled' => env('NOTIFICATION_PAYMENT_SUCCESS_SMS', true),
+            'email_enabled' => env('NOTIFICATION_PAYMENT_SUCCESS_EMAIL', true),
+        ],
+        'subscription_activated' => [
+            'channels' => env('NOTIFICATION_SUBSCRIPTION_ACTIVATED_CHANNELS', null),
+            'sms_enabled' => env('NOTIFICATION_SUBSCRIPTION_ACTIVATED_SMS', true),
+            'email_enabled' => env('NOTIFICATION_SUBSCRIPTION_ACTIVATED_EMAIL', true),
+        ],
+        'expiration_warning' => [
+            'channels' => env('NOTIFICATION_EXPIRATION_WARNING_CHANNELS', null),
+            'sms_enabled' => env('NOTIFICATION_EXPIRATION_WARNING_SMS', true),
+            'email_enabled' => env('NOTIFICATION_EXPIRATION_WARNING_EMAIL', true),
+            'warning_hours' => env('NOTIFICATION_EXPIRATION_WARNING_HOURS', 24), // Hours before expiry
+        ],
+    ],
+
+    /*
+    |--------------------------------------------------------------------------
+    | Retry and Fallback Settings
+    |--------------------------------------------------------------------------
+    */
+    'retry' => [
+        'max_attempts' => env('NOTIFICATION_MAX_RETRY_ATTEMPTS', 3),
+        'delay_seconds' => env('NOTIFICATION_RETRY_DELAY', 5),
+        'exponential_backoff' => env('NOTIFICATION_EXPONENTIAL_BACKOFF', true),
+    ],
+
+    /*
+    |--------------------------------------------------------------------------
+    | Logging Settings
+    |--------------------------------------------------------------------------
+    */
+    'logging' => [
+        'enabled' => env('NOTIFICATION_LOG_ENABLED', true),
+        'log_success' => env('NOTIFICATION_LOG_SUCCESS', true),
+        'log_failures' => env('NOTIFICATION_LOG_FAILURES', true),
+        'log_retries' => env('NOTIFICATION_LOG_RETRIES', true),
+    ],
+
+    /*
+    |--------------------------------------------------------------------------
+    | Rate Limiting
+    |--------------------------------------------------------------------------
+    */
+    'rate_limiting' => [
+        'enabled' => env('NOTIFICATION_RATE_LIMITING_ENABLED', true),
+        'max_per_minute' => env('NOTIFICATION_MAX_PER_MINUTE', 60),
+        'max_per_hour' => env('NOTIFICATION_MAX_PER_HOUR', 1000),
+    ],
+
+    /*
+    |--------------------------------------------------------------------------
+    | Message Templates
+    |--------------------------------------------------------------------------
+    */
+    'templates' => [
+        'welcome' => [
+            'sms' => "Welcome to JayNet WI-FI! Account:\n{username}\nPassword: {password}\nUrl:http://jaynet.local.com. Connect using these credentials.",
+            'email_subject' => 'Welcome to JayNet WI-FI - Account Created',
+            'email_body' => 'Welcome to JayNet WI-FI! Your account has been created successfully. Username: {username}, Password: {password}. Please use these credentials to connect to our network.',
+        ],
+        'trial_assignment' => [
+            'sms' => 'Free trial package "{package_name}" activated! Valid until {expires_at}. Enjoy True Freedom - Unlimited browsing!',
+            'email_subject' => 'Trial Package Activated - {package_name}',
+            'email_body' => 'Great news! Your trial package "{package_name}" has been activated and is valid until {expires_at}. Enjoy True Freedom - Unlimited browsing!',
+        ],
+        'setup_instructions' => [
+            'sms' => 'Welcome to JayNet WiFi! Connect to our network, then visit http://jaynet.local.com and login with Username: {username} | Password: {password}',
+            'email_subject' => 'Your JayNet WiFi Access Details',
+            'email_body' => 'Welcome to JayNet WiFi!
+                    To get connected, follow these simple steps:
+
+                    1. Connect to the JayNet WiFi network
+                    2. Open your browser and go to: http://jaynet.local.com
+                    3. Enter your credentials:
+                    • Username: {username}
+                    • Password: {password}
+
+                    Need help? Contact our support team.
+
+                    Best regards,
+                    The JayNet Team',
+        ],
+        'payment_success' => [
+            'sms' => 'Payment successful! Amount: {amount} {currency}. Transaction ID: {transaction_id}. Thank you!',
+            'email_subject' => 'Payment Confirmation - {amount} {currency}',
+            'email_body' => 'Your payment has been processed successfully. Amount: {amount} {currency}, Transaction ID: {transaction_id}. Thank you for your payment!',
+        ],
+        'subscription_activated' => [
+            'sms' => 'Subscription activated! Package: {package_name}, Valid until: {expires_at}. Username: {username}',
+            'email_subject' => 'Subscription Activated - {package_name}',
+            'email_body' => 'Your subscription has been activated successfully! Package: {package_name}, Valid until: {expires_at}. Username: {username}. Enjoy your service!',
+        ],
+        'expiration_warning' => [
+            'sms' => 'REMINDER: Your subscription expires in {time_remaining_display}. Renew now to avoid interruption. Tap: http://jaynet.local.com/logout to renew!',
+            'email_subject' => 'Subscription Expiring Soon - {package_name}',
+            'email_body' => 'REMINDER: Your subscription "{package_name}" will expire in {time_remaining_display} on {expires_at}. Please renew your subscription to avoid service interruption.',
+        ],
+    ],
+
+    /*
+    |--------------------------------------------------------------------------
+    | Emergency Fallback Settings
+    |--------------------------------------------------------------------------
+    */
+    'emergency' => [
+        'fallback_to_log' => env('NOTIFICATION_EMERGENCY_LOG_FALLBACK', true),
+        'admin_notification' => env('NOTIFICATION_EMERGENCY_ADMIN_NOTIFY', true),
+        'admin_email' => env('NOTIFICATION_EMERGENCY_ADMIN_EMAIL', null),
+        'admin_phone' => env('NOTIFICATION_EMERGENCY_ADMIN_PHONE', null),
+    ],
+];

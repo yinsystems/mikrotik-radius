@@ -1,0 +1,554 @@
+<?php
+
+namespace App\Filament\Resources;
+
+use App\Filament\Resources\PaymentResource\Pages;
+use App\Filament\Resources\PaymentResource\RelationManagers;
+use App\Models\Payment;
+use App\Models\Customer;
+use App\Models\Package;
+use App\Models\Subscription;
+use Filament\Forms;
+use Filament\Forms\Form;
+use Filament\Resources\Resource;
+use Filament\Tables;
+use Filament\Tables\Table;
+use Filament\Notifications\Notification;
+use Illuminate\Database\Eloquent\Builder;
+use Illuminate\Support\Facades\Auth;
+
+class PaymentResource extends Resource
+{
+    protected static ?string $model = Payment::class;
+
+    protected static ?string $navigationIcon = 'heroicon-o-credit-card';
+
+    protected static ?string $navigationGroup = 'Financial Management';
+
+    protected static ?string $recordTitleAttribute = 'internal_reference';
+
+    protected static ?int $navigationSort = 1;
+
+    public static function form(Form $form): Form
+    {
+        return $form
+            ->schema([
+                Forms\Components\Section::make('Payment Information')
+                    ->schema([
+                        Forms\Components\Grid::make(2)
+                            ->schema([
+                                Forms\Components\Select::make('customer_id')
+                                    ->relationship('customer', 'name')
+                                    ->required()
+                                    ->searchable()
+                                    ->preload()
+                                    ->reactive()
+                                    ->afterStateUpdated(function (callable $set, $state) {
+                                        if ($state) {
+                                            $customer = Customer::find($state);
+                                            $activeSubscription = $customer?->activeSubscription;
+
+                                            if ($activeSubscription) {
+                                                $set('subscription_id', $activeSubscription->id);
+                                                $set('package_id', $activeSubscription->package_id);
+                                                $set('amount', $activeSubscription->package->price);
+                                            }
+                                        }
+                                    })
+                                    ->helperText('Select the customer making the payment'),
+
+                                Forms\Components\Select::make('subscription_id')
+                                    ->relationship('subscription', 'id')
+                                    ->searchable()
+                                    ->preload()
+                                    ->reactive()
+                                    ->afterStateUpdated(function (callable $set, $state) {
+                                        if ($state) {
+                                            $subscription = Subscription::find($state);
+                                            if ($subscription) {
+                                                $set('package_id', $subscription->package_id);
+                                                $set('amount', $subscription->package->price);
+                                            }
+                                        }
+                                    })
+                                    ->helperText('Associated subscription (optional)'),
+                            ]),
+
+                        Forms\Components\Grid::make(3)
+                            ->schema([
+                                Forms\Components\Select::make('package_id')
+                                    ->relationship('package', 'name')
+                                    ->searchable()
+                                    ->preload()
+                                    ->reactive()
+                                    ->afterStateUpdated(function (callable $set, $state) {
+                                        if ($state) {
+                                            $package = Package::find($state);
+                                            if ($package) {
+                                                $set('amount', $package->price);
+                                            }
+                                        }
+                                    })
+                                    ->helperText('Package being paid for'),
+
+                                Forms\Components\TextInput::make('amount')
+                                    ->required()
+                                    ->numeric()
+                                    ->prefix('₵')
+                                    ->minValue(0)
+                                    ->step(0.01)
+                                    ->helperText('Payment amount in Ghanaian Cedis'),
+
+                                Forms\Components\Hidden::make('currency')
+                                    ->default('GHS'),
+                            ]),
+                    ])
+                    ->collapsible(),
+
+                Forms\Components\Section::make('Payment Method')
+                    ->schema([
+                        Forms\Components\Grid::make(2)
+                            ->schema([
+                                Forms\Components\Select::make('payment_method')
+                                    ->required()
+                                    ->options([
+                                        'mobile_money' => 'Mobile Money',
+                                        'cash' => 'Cash',
+                                        'bank_transfer' => 'Bank Transfer',
+                                        'card' => 'Card Payment',
+                                        'voucher' => 'Voucher/Credit',
+                                    ])
+                                    ->reactive()
+                                    ->helperText('Payment method used'),
+
+                                Forms\Components\Select::make('mobile_money_provider')
+                                    ->options([
+                                        'mtn' => 'MTN Mobile Money',
+                                        'airtel' => 'AirtelTigo Money',
+                                        'vodafone' => 'Vodafone Cash',
+                                        'zeepay' => 'Zeepay',
+                                    ])
+                                    ->visible(fn (callable $get) => $get('payment_method') === 'mobile_money')
+                                    ->required(fn (callable $get) => $get('payment_method') === 'mobile_money'),
+                            ]),
+
+                        Forms\Components\Grid::make(2)
+                            ->schema([
+                                Forms\Components\TextInput::make('mobile_number')
+                                    ->tel()
+                                    ->placeholder('0241234567')
+                                    ->visible(fn (callable $get) => $get('payment_method') === 'mobile_money')
+                                    ->required(fn (callable $get) => $get('payment_method') === 'mobile_money')
+                                    ->helperText('Mobile money number'),
+
+                                Forms\Components\TextInput::make('transaction_id')
+                                    ->placeholder('Provider transaction ID')
+                                    ->helperText('Transaction ID from payment provider'),
+                            ]),
+                    ])
+                    ->collapsible(),
+
+                Forms\Components\Section::make('Payment Status & References')
+                    ->schema([
+                        Forms\Components\Grid::make(3)
+                            ->schema([
+                                Forms\Components\Select::make('status')
+                                    ->required()
+                                    ->options([
+                                        'pending' => 'Pending',
+                                        'processing' => 'Processing',
+                                        'completed' => 'Completed',
+                                        'failed' => 'Failed',
+                                        'cancelled' => 'Cancelled',
+                                    ])
+                                    ->default('pending')
+                                    ->reactive(),
+
+                                Forms\Components\TextInput::make('internal_reference')
+                                    ->default(fn () => Payment::generateInternalReference())
+                                    ->required()
+                                    ->unique(ignoreRecord: true)
+                                    ->helperText('Internal payment reference'),
+
+                                Forms\Components\TextInput::make('external_reference')
+                                    ->placeholder('External reference (optional)')
+                                    ->helperText('Provider reference number'),
+                            ]),
+
+                        Forms\Components\Grid::make(2)
+                            ->schema([
+                                Forms\Components\DateTimePicker::make('payment_date')
+                                    ->default(now())
+                                    ->required()
+                                    ->helperText('When the payment was made'),
+
+                                Forms\Components\Hidden::make('processed_by')
+                                    ->default(Auth::id()),
+                            ]),
+                    ])
+                    ->collapsible(),
+
+                Forms\Components\Section::make('Additional Information')
+                    ->schema([
+                        Forms\Components\TextInput::make('failure_reason')
+                            ->visible(fn (callable $get) => in_array($get('status'), ['failed', 'cancelled']))
+                            ->helperText('Reason for failure or cancellation'),
+
+                        Forms\Components\Textarea::make('notes')
+                            ->rows(3)
+                            ->placeholder('Additional notes about this payment')
+                            ->helperText('Internal notes (not visible to customer)'),
+                    ])
+                    ->collapsible()
+                    ->collapsed(),
+            ]);
+    }
+
+    public static function table(Table $table): Table
+    {
+        return $table
+            ->columns([
+                Tables\Columns\TextColumn::make('internal_reference')
+                    ->label('Reference')
+                    ->searchable()
+                    ->sortable()
+                    ->weight('bold')
+                    ->copyable(),
+
+                Tables\Columns\TextColumn::make('customer.name')
+                    ->searchable()
+                    ->sortable()
+                    ->description(fn (Payment $record): string => $record->customer?->email ?? ''),
+
+                Tables\Columns\TextColumn::make('package.name')
+                    ->searchable()
+                    ->sortable()
+                    ->description(fn (Payment $record): string => $record->package?->duration_display ?? ''),
+
+                Tables\Columns\TextColumn::make('amount')
+                    ->money('GHS')
+                    ->sortable()
+                    ->weight('semibold')
+                    ->color('success'),
+
+                Tables\Columns\BadgeColumn::make('payment_method')
+                    ->label('Method')
+                    ->formatStateUsing(function (string $state): string {
+                        return match($state) {
+                            'mobile_money' => 'Mobile Money',
+                            'bank_transfer' => 'Bank Transfer',
+                            default => ucfirst(str_replace('_', ' ', $state))
+                        };
+                    })
+                    ->color(fn (string $state): string => match($state) {
+                        'mobile_money' => 'success',
+                        'cash' => 'warning',
+                        'bank_transfer' => 'info',
+                        'card' => 'primary',
+                        'voucher' => 'gray',
+                        default => 'secondary',
+                    }),
+
+                Tables\Columns\TextColumn::make('mobile_money_provider')
+                    ->label('Provider')
+                    ->formatStateUsing(function (?string $state): string {
+                        if (!$state) return '-';
+                        return match($state) {
+                            'mtn' => 'MTN MoMo',
+                            'airtel' => 'AirtelTigo',
+                            'vodafone' => 'Vodafone Cash',
+                            'zeepay' => 'Zeepay',
+                            default => ucfirst($state)
+                        };
+                    })
+                    ->badge()
+                    ->color('info')
+                    ->toggleable(),
+
+                Tables\Columns\BadgeColumn::make('status')
+                    ->color(fn (string $state): string => match($state) {
+                        'completed' => 'success',
+                        'pending', 'processing' => 'warning',
+                        'failed', 'cancelled' => 'danger',
+                        'refunded', 'partially_refunded' => 'info',
+                        default => 'gray',
+                    })
+                    ->icon(fn (string $state): string => match($state) {
+                        'completed' => 'heroicon-o-check-circle',
+                        'pending' => 'heroicon-o-clock',
+                        'processing' => 'heroicon-o-arrow-path',
+                        'failed' => 'heroicon-o-x-circle',
+                        'cancelled' => 'heroicon-o-minus-circle',
+                        'refunded' => 'heroicon-o-arrow-uturn-left',
+                        'partially_refunded' => 'heroicon-o-arrow-path-rounded-square',
+                        default => 'heroicon-o-question-mark-circle',
+                    }),
+
+                Tables\Columns\TextColumn::make('refund_amount')
+                    ->label('Refunded')
+                    ->money('GHS')
+                    ->placeholder('₵0.00')
+                    ->color('danger')
+                    ->toggleable(),
+
+                Tables\Columns\TextColumn::make('payment_date')
+                    ->label('Date')
+                    ->dateTime()
+                    ->sortable()
+                    ->toggleable(),
+
+                Tables\Columns\TextColumn::make('transaction_id')
+                    ->label('Transaction ID')
+                    ->searchable()
+                    ->toggleable(isToggledHiddenByDefault: true)
+                    ->copyable(),
+
+                Tables\Columns\TextColumn::make('created_at')
+                    ->label('Created')
+                    ->dateTime()
+                    ->sortable()
+                    ->toggleable(isToggledHiddenByDefault: true),
+            ])
+            ->filters([
+                Tables\Filters\SelectFilter::make('status')
+                    ->options([
+                        'pending' => 'Pending',
+                        'processing' => 'Processing',
+                        'completed' => 'Completed',
+                        'failed' => 'Failed',
+                        'cancelled' => 'Cancelled',
+                        'refunded' => 'Refunded',
+                        'partially_refunded' => 'Partially Refunded',
+                    ])
+                    ->multiple(),
+
+                Tables\Filters\SelectFilter::make('payment_method')
+                    ->options([
+                        'mobile_money' => 'Mobile Money',
+                        'cash' => 'Cash',
+                        'bank_transfer' => 'Bank Transfer',
+                        'card' => 'Card Payment',
+                        'voucher' => 'Voucher',
+                    ])
+                    ->multiple(),
+
+                Tables\Filters\SelectFilter::make('mobile_money_provider')
+                    ->options([
+                        'mtn' => 'MTN Mobile Money',
+                        'airtel' => 'AirtelTigo Money',
+                        'vodafone' => 'Vodafone Cash',
+                        'zeepay' => 'Zeepay',
+                    ])
+                    ->multiple(),
+
+                Tables\Filters\Filter::make('refunded')
+                    ->label('Has Refunds')
+                    ->query(fn (Builder $query): Builder => $query->whereIn('status', ['refunded', 'partially_refunded']))
+                    ->toggle(),
+
+                Tables\Filters\Filter::make('today')
+                    ->label('Today')
+                    ->query(fn (Builder $query): Builder => $query->whereDate('payment_date', today()))
+                    ->toggle(),
+
+                Tables\Filters\Filter::make('this_month')
+                    ->label('This Month')
+                    ->query(fn (Builder $query): Builder => $query->thisMonth())
+                    ->toggle(),
+
+                Tables\Filters\Filter::make('amount_range')
+                    ->form([
+                        Forms\Components\Grid::make(2)
+                            ->schema([
+                                Forms\Components\TextInput::make('amount_from')
+                                    ->numeric()
+                                    ->prefix('₵'),
+                                Forms\Components\TextInput::make('amount_to')
+                                    ->numeric()
+                                    ->prefix('₵'),
+                            ]),
+                    ])
+                    ->query(function (Builder $query, array $data): Builder {
+                        return $query
+                            ->when(
+                                $data['amount_from'],
+                                fn (Builder $query, $amount): Builder => $query->where('amount', '>=', $amount),
+                            )
+                            ->when(
+                                $data['amount_to'],
+                                fn (Builder $query, $amount): Builder => $query->where('amount', '<=', $amount),
+                            );
+                    }),
+            ])
+            ->actions([
+                Tables\Actions\ViewAction::make()
+                    ->color('info'),
+
+                Tables\Actions\EditAction::make()
+                    ->color('warning'),
+
+                Tables\Actions\Action::make('approve')
+                    ->label('Approve')
+                    ->icon('heroicon-o-check-circle')
+                    ->color('success')
+                    ->requiresConfirmation()
+                    ->visible(fn (Payment $record) => $record->isPending())
+                    ->action(function (Payment $record) {
+                        $record->markAsCompleted();
+
+                        Notification::make()
+                            ->title('Payment approved')
+                            ->body('Payment has been marked as completed.')
+                            ->success()
+                            ->send();
+                    }),
+
+                Tables\Actions\Action::make('reject')
+                    ->label('Reject')
+                    ->icon('heroicon-o-x-circle')
+                    ->color('danger')
+                    ->requiresConfirmation()
+                    ->visible(fn (Payment $record) => $record->isPending())
+                    ->form([
+                        Forms\Components\Textarea::make('failure_reason')
+                            ->required()
+                            ->placeholder('Reason for rejection'),
+                    ])
+                    ->action(function (Payment $record, array $data) {
+                        $record->markAsFailed($data['failure_reason']);
+
+                        Notification::make()
+                            ->title('Payment rejected')
+                            ->body('Payment has been marked as failed.')
+                            ->success()
+                            ->send();
+                    }),
+
+                Tables\Actions\Action::make('refund')
+                    ->label('Refund')
+                    ->icon('heroicon-o-arrow-uturn-left')
+                    ->color('danger')
+                    ->requiresConfirmation()
+                    ->visible(fn (Payment $record) => $record->canBeRefunded())
+                    ->form([
+                        Forms\Components\Select::make('refund_type')
+                            ->required()
+                            ->options([
+                                'full' => 'Full Refund',
+                                'partial' => 'Partial Refund',
+                            ])
+                            ->reactive(),
+
+                        Forms\Components\TextInput::make('refund_amount')
+                            ->numeric()
+                            ->prefix('₵')
+                            ->required()
+                            ->visible(fn (callable $get) => $get('refund_type') === 'partial')
+                            ->rules(['min:0.01']),
+
+                        Forms\Components\Textarea::make('refund_reason')
+                            ->required()
+                            ->placeholder('Reason for refund'),
+                    ])
+                    ->action(function (Payment $record, array $data) {
+                        try {
+                            if ($data['refund_type'] === 'full') {
+                                $record->processFullRefund(
+                                    $data['refund_reason'],
+                                    Auth::id()
+                                );
+                            } else {
+                                $record->processPartialRefund(
+                                    $data['refund_amount'],
+                                    $data['refund_reason'],
+                                    Auth::id()
+                                );
+                            }
+
+                            Notification::make()
+                                ->title('Refund processed')
+                                ->body('Payment refund has been processed successfully.')
+                                ->success()
+                                ->send();
+
+                        } catch (\Exception $e) {
+                            Notification::make()
+                                ->title('Refund failed')
+                                ->body($e->getMessage())
+                                ->danger()
+                                ->send();
+                        }
+                    }),
+            ])
+            ->bulkActions([
+                Tables\Actions\BulkActionGroup::make([
+                    Tables\Actions\BulkAction::make('approve_selected')
+                        ->label('Approve Selected')
+                        ->icon('heroicon-o-check-circle')
+                        ->color('success')
+                        ->requiresConfirmation()
+                        ->action(function ($records) {
+                            $approved = 0;
+                            foreach ($records as $record) {
+                                if ($record->isPending()) {
+                                    $record->markAsCompleted();
+                                    $approved++;
+                                }
+                            }
+
+                            Notification::make()
+                                ->title('Payments approved')
+                                ->body("{$approved} payments have been approved.")
+                                ->success()
+                                ->send();
+                        }),
+
+                    Tables\Actions\BulkAction::make('export')
+                        ->label('Export CSV')
+                        ->icon('heroicon-o-arrow-down-tray')
+                        ->color('gray')
+                        ->action(function ($records) {
+                            // Implementation for CSV export
+                            Notification::make()
+                                ->title('Export initiated')
+                                ->body('Payment data export will be available shortly.')
+                                ->info()
+                                ->send();
+                        }),
+
+                    Tables\Actions\DeleteBulkAction::make()
+                        ->requiresConfirmation(),
+                ]),
+            ])
+            ->defaultSort('created_at', 'desc')
+            ->striped()
+            ->paginated([10, 25, 50, 100]);
+    }
+
+    public static function getRelations(): array
+    {
+        return [
+            RelationManagers\RefundsRelationManager::class,
+        ];
+    }
+
+    public static function getPages(): array
+    {
+        return [
+            'index' => Pages\ListPayments::route('/'),
+            'create' => Pages\CreatePayment::route('/create'),
+            'view' => Pages\ViewPayment::route('/{record}'),
+            'edit' => Pages\EditPayment::route('/{record}/edit'),
+        ];
+    }
+
+    public static function getNavigationBadge(): ?string
+    {
+        return static::getModel()::pending()->count();
+    }
+
+    public static function getNavigationBadgeColor(): string|array|null
+    {
+        return 'warning';
+    }
+}

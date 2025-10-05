@@ -1,0 +1,603 @@
+@extends('layouts.portal')
+@php
+    use Illuminate\Support\Facades\Session;
+@endphp
+@section('title', 'Register - WiFi Portal')
+
+@section('content')
+    <div class="space-y-6">
+
+        <!-- Back Button -->
+        <div class="flex items-center">
+            <a href="{{ route('portal.index') }}" class="text-blue-600 hover:text-blue-700 flex items-center space-x-2">
+                <i class="fas fa-arrow-left"></i>
+                <span>Back</span>
+            </a>
+        </div>
+
+        <!-- Registration Form -->
+        <div id="registrationForm" class="bg-white rounded-xl card-shadow p-6">
+            <div class="text-center mb-6">
+                <div class="w-16 h-16 mx-auto mb-4 flex items-center justify-center">
+                    <img src="{{ asset('logo/wifi.png') }}" alt="WiFi Logo"
+                         class="max-w-full max-h-full object-contain">
+                </div>
+                <h2 class="text-xl font-bold text-gray-900">Create Account</h2>
+                <p class="text-gray-600 text-sm">Enter your details to get started</p>
+            </div>
+
+            <form id="registerForm" class="space-y-4">
+                @csrf
+
+                <!-- Full Name -->
+                <div>
+                    <label for="name" class="block text-sm font-medium text-gray-700 mb-2">
+                        Full Name *
+                    </label>
+                    <input type="text"
+                           id="name"
+                           name="name"
+                           class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                           placeholder="Enter your full name"
+                           required>
+                    <p class="text-xs text-gray-500 mt-1">Enter your first and last name</p>
+                </div>
+
+                <!-- Email Address -->
+                <div>
+                    <label for="email" class="block text-sm font-medium text-gray-700 mb-2">
+                        Email Address
+                    </label>
+                    <input type="email"
+                           id="email"
+                           name="email"
+                           class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                           placeholder="your.email@example.com">
+                    <p class="text-xs text-gray-500 mt-1">Email for notifications and account recovery</p>
+                </div>
+
+                <!-- Phone Number -->
+                <div>
+                    <label for="phone" class="block text-sm font-medium text-gray-700 mb-2">
+                        Phone Number *
+                    </label>
+                    <input type="tel"
+                           id="phone"
+                           name="phone"
+                           class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                           placeholder="0244123456"
+                           oninput="formatPhoneNumber(this)"
+                           required>
+                    <p class="text-xs text-gray-500 mt-1">Enter your phone number (e.g., 0244123456)</p>
+                </div>
+
+                <!-- Password -->
+                <div>
+                    <label for="password" class="block text-sm font-medium text-gray-700 mb-2">
+                        WiFi Password *
+                    </label>
+                    <div class="relative">
+                        <input type="text"
+                               id="password"
+                               name="password"
+                               class="w-full px-4 py-3 pr-12 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                               placeholder="Create your WiFi password"
+                               minlength="6"
+                               required>
+                        <div class="absolute inset-y-0 right-0 pr-3 flex items-center">
+                            <button type="button"
+                                    onclick="generatePassword()"
+                                    class="text-blue-600 hover:text-blue-700 text-sm font-medium"
+                                    title="Generate strong password">
+                                <i class="fas fa-magic"></i>
+                            </button>
+                        </div>
+                    </div>
+                    <div class="mt-2">
+                        <div class="flex items-center space-x-2 text-xs">
+                            <div class="flex items-center space-x-1">
+                                <div id="lengthCheck" class="w-2 h-2 rounded-full bg-gray-300"></div>
+                                <span class="text-gray-600">6+ characters</span>
+                            </div>
+                            <div class="flex items-center space-x-1">
+                                <div id="complexCheck" class="w-2 h-2 rounded-full bg-gray-300"></div>
+                                <span class="text-gray-600">Letters & numbers</span>
+                            </div>
+                        </div>
+                        <p class="text-xs text-blue-600 mt-1">
+                            <i class="fas fa-info-circle mr-1"></i>
+                            This password will be used to connect to WiFi (Username: your phone number)
+                        </p>
+                    </div>
+                </div>
+
+                <!-- Terms and Conditions -->
+                <div class="flex items-start space-x-3">
+                    <input type="checkbox"
+                           id="terms"
+                           name="terms"
+                           value="1"
+                           class="mt-1 h-4 w-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500"
+                           required>
+                    <label for="terms" class="text-sm text-gray-700">
+                        I agree to the
+                        <button type="button" onclick="showTermsModal()"
+                                class="text-blue-600 hover:underline focus:outline-none">Terms of Service
+                        </button>
+                        and
+                        <button type="button" onclick="showPrivacyModal()"
+                                class="text-blue-600 hover:underline focus:outline-none">Privacy Policy
+                        </button>
+                    </label>
+                </div>
+
+                <!-- Submit Button -->
+                <button type="submit"
+                        class="w-full bg-blue-600 text-white py-3 px-4 rounded-lg font-medium hover:bg-blue-700 transition-colors btn-loading"
+                        id="registerBtn">
+                    <span class="btn-text" id="registerBtnText">Send OTP</span>
+                    <div class="spinner hidden"></div>
+                </button>
+            </form>
+        </div>
+
+        <!-- OTP Verification Form (Hidden Initially) -->
+        <div id="otpForm" class="bg-white rounded-xl card-shadow p-6 hidden">
+            <div class="text-center mb-6">
+                <div class="w-16 h-16 mx-auto bg-green-100 rounded-full flex items-center justify-center mb-4">
+                    <i class="fas fa-mobile-alt text-2xl text-green-600"></i>
+                </div>
+                <h2 class="text-xl font-bold text-gray-900">Verify Phone Number</h2>
+                <p class="text-gray-600 text-sm">Enter the 6-digit code sent to <span id="phoneDisplay"
+                                                                                      class="font-medium"></span></p>
+                <p class="text-xs text-gray-500 mt-2">Code expires in <span id="countdown"
+                                                                            class="font-medium text-red-600"></span></p>
+            </div>
+
+            <form id="verifyForm" class="space-y-4">
+                @csrf
+
+                <!-- OTP Input -->
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-3 text-center">Verification Code</label>
+                    <div class="flex justify-center space-x-2 mb-4">
+                        <input type="text" maxlength="1"
+                               class="otp-input w-10 h-12 text-center border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-lg font-medium"
+                               onkeyup="handleOtpInput(this, 'otp2'); checkOtpComplete();" id="otp1">
+                        <input type="text" maxlength="1"
+                               class="otp-input w-10 h-12 text-center border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-lg font-medium"
+                               onkeyup="handleOtpInput(this, 'otp3'); checkOtpComplete();" id="otp2">
+                        <input type="text" maxlength="1"
+                               class="otp-input w-10 h-12 text-center border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-lg font-medium"
+                               onkeyup="handleOtpInput(this, 'otp4'); checkOtpComplete();" id="otp3">
+                        <input type="text" maxlength="1"
+                               class="otp-input w-10 h-12 text-center border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-lg font-medium"
+                               onkeyup="handleOtpInput(this, 'otp5'); checkOtpComplete();" id="otp4">
+                        <input type="text" maxlength="1"
+                               class="otp-input w-10 h-12 text-center border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-lg font-medium"
+                               onkeyup="handleOtpInput(this, 'otp6'); checkOtpComplete();" id="otp5">
+                        <input type="text" maxlength="1"
+                               class="otp-input w-10 h-12 text-center border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-lg font-medium"
+                               onkeyup="handleOtpInput(this, null); checkOtpComplete();" id="otp6">
+                    </div>
+                    <input type="hidden" id="otp" name="otp">
+                </div>
+
+                <!-- Verify Button -->
+                <button type="submit"
+                        class="w-full bg-green-600 text-white py-3 px-4 rounded-lg font-medium hover:bg-green-700 transition-colors btn-loading otp-submit-btn"
+                        id="verifyBtn"
+                        disabled>
+                    <span class="btn-text">Verify & Create Account</span>
+                    <div class="spinner hidden"></div>
+                </button>
+
+                <!-- Resend Link -->
+                <div class="text-center">
+                    <button type="button"
+                            id="resendBtn"
+                            class="text-blue-600 hover:text-blue-700 text-sm underline"
+                            onclick="resendOtp()"
+                            disabled>
+                        Resend Code
+                    </button>
+                    <p class="text-xs text-gray-500 mt-1">You can resend in <span id="resendCountdown">60</span> seconds
+                    </p>
+                </div>
+            </form>
+
+            <!-- Change Phone Number -->
+            <div class="mt-6 pt-4 border-t border-gray-200 text-center">
+                <button type="button"
+                        onclick="changePhoneNumber()"
+                        class="text-gray-600 hover:text-gray-700 text-sm">
+                    <i class="fas fa-edit mr-1"></i>
+                    Change Phone Number
+                </button>
+            </div>
+        </div>
+
+    </div>
+@endsection
+
+@push('scripts')
+    <script>
+        let countdownTimer;
+        let resendTimer;
+        let expiresAt;
+        let otpEnabled = true; // Default to true
+
+        // Check OTP status on page load
+        document.addEventListener('DOMContentLoaded', function() {
+            checkOtpStatus();
+            initializePasswordValidation();
+        });
+
+        // Check if OTP is enabled in settings
+        function checkOtpStatus() {
+            fetch("{{ route('portal.otp.status') }}")
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success) {
+                        otpEnabled = data.registration_otp_enabled;
+                        updateRegisterButtonText();
+                    }
+                })
+                .catch(error => {
+                    console.error('Error checking OTP status:', error);
+                    // Default to OTP enabled if there's an error
+                    otpEnabled = true;
+                });
+        }
+
+        // Update the register button text based on OTP status
+        function updateRegisterButtonText() {
+            const buttonText = document.getElementById('registerBtnText');
+            if (otpEnabled) {
+                buttonText.textContent = 'Send OTP';
+            } else {
+                buttonText.textContent = 'Create Account';
+            }
+        }
+
+        // Handle registration form submission
+        document.getElementById('registerForm').addEventListener('submit', function (e) {
+            e.preventDefault();
+
+            const name = document.getElementById('name').value.trim();
+            const email = document.getElementById('email').value.trim();
+            const phone = document.getElementById('phone').value;
+            const password = document.getElementById('password').value;
+            const terms = document.getElementById('terms').checked;
+
+            if (!name) {
+                showAlert('Error', 'Please enter your full name');
+                return;
+            }
+
+            if (!phone) {
+                showAlert('Error', 'Please enter your phone number');
+                return;
+            }
+
+            if (!password) {
+                showAlert('Error', 'Please enter a WiFi password');
+                return;
+            }
+
+            if (!terms) {
+                showAlert('Error', 'Please accept the terms and conditions');
+                return;
+            }
+
+            // Validate name (at least 2 words)
+            if (name.split(' ').filter(word => word.length > 0).length < 2) {
+                showAlert('Error', 'Please enter your full name (first and last name)');
+                return;
+            }
+
+            // Validate email format if provided
+            if (email && !isValidEmail(email)) {
+                showAlert('Error', 'Please enter a valid email address');
+                return;
+            }
+
+            // Validate phone number format
+            const phoneRegex = /^0[0-9]{9}$/;
+            if (!phoneRegex.test(phone)) {
+                showAlert('Error', 'Please enter a valid 10-digit phone number starting with 0');
+                return;
+            }
+
+            // Validate password strength
+            if (password.length < 6) {
+                showAlert('Error', 'Password must be at least 6 characters long');
+                return;
+            }
+
+            if (!/(?=.*[a-zA-Z])(?=.*[0-9])/.test(password)) {
+                showAlert('Error', 'Password must contain both letters and numbers');
+                return;
+            }
+
+            // Handle submission based on OTP status
+            if (otpEnabled) {
+                // Original flow: Send OTP first
+                submitForm('registerForm', "{{ route('portal.register.submit') }}", {
+                    onSuccess: function (data) {
+                        showOtpForm(phone, data.expires_at);
+                    }
+                });
+            } else {
+                // Direct registration: Skip OTP and create account directly
+                submitDirectRegistration();
+            }
+        });
+
+        // Direct registration without OTP
+        function submitDirectRegistration() {
+            const formData = {
+                name: document.getElementById('name').value.trim(),
+                email: document.getElementById('email').value.trim(),
+                phone: document.getElementById('phone').value,
+                password: document.getElementById('password').value,
+                terms: 1,
+                skip_otp: true // Flag to indicate OTP should be skipped
+            };
+
+            console.log('Submitting direct registration with data:', formData);
+            showLoading();
+
+            fetch("{{ route('portal.register.submit') }}", {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').getAttribute('content'),
+                },
+                body: JSON.stringify(formData)
+            })
+            .then(response => response.json())
+            .then(data => {
+                hideLoading();
+                console.log('Registration response:', data);
+
+                if (data.success) {
+                    // Registration successful, redirect to packages or dashboard
+                    // showAlert('Success', 'Account created successfully!', function() {
+                    //
+                    // });
+                    console.log('Redirecting to:', data.redirect_url || "{{ route('portal.packages') }}");
+                    if (data.redirect_url) {
+                        window.location.href = data.redirect_url;
+                    } else {
+                        window.location.href = "{{ route('portal.packages') }}";
+                    }
+                } else {
+                    console.error('Registration failed:', data.message);
+                    showAlert('Error', data.message || 'Registration failed. Please try again.');
+                }
+            })
+            .catch(error => {
+                hideLoading();
+                console.error('Registration error:', error);
+                showAlert('Error', 'Registration failed. Please try again.');
+            });
+        }
+
+        // Handle OTP verification form submission
+        document.getElementById('verifyForm').addEventListener('submit', function (e) {
+            e.preventDefault();
+
+            const otp = document.getElementById('otp').value;
+            if (otp.length !== 6) {
+                showAlert('Error', 'Please enter the complete 6-digit code');
+                return;
+            }
+
+            submitForm('verifyForm', "{{ route('portal.verify.otp') }}");
+        });
+
+        function showOtpForm(phone, expirationTime) {
+            document.getElementById('registrationForm').classList.add('hidden');
+            document.getElementById('otpForm').classList.remove('hidden');
+            document.getElementById('phoneDisplay').textContent = phone;
+
+            expiresAt = new Date(expirationTime);
+            startCountdown();
+            startResendTimer();
+
+            // Focus on first OTP input
+            document.getElementById('otp1').focus();
+        }
+
+        function startCountdown() {
+            countdownTimer = setInterval(function () {
+                const now = new Date().getTime();
+                const distance = expiresAt.getTime() - now;
+
+                if (distance > 0) {
+                    const minutes = Math.floor((distance % (1000 * 60 * 60)) / (1000 * 60));
+                    const seconds = Math.floor((distance % (1000 * 60)) / 1000);
+                    document.getElementById('countdown').textContent =
+                        (minutes < 10 ? '0' + minutes : minutes) + ':' + (seconds < 10 ? '0' + seconds : seconds);
+                } else {
+                    document.getElementById('countdown').textContent = '00:00';
+                    clearInterval(countdownTimer);
+                    showAlert('Error', 'OTP has expired. Please request a new one.');
+                }
+            }, 1000);
+        }
+
+        function startResendTimer() {
+            let seconds = 60;
+            document.getElementById('resendBtn').disabled = true;
+
+            resendTimer = setInterval(function () {
+                seconds--;
+                document.getElementById('resendCountdown').textContent = seconds;
+
+                if (seconds <= 0) {
+                    clearInterval(resendTimer);
+                    document.getElementById('resendBtn').disabled = false;
+                    document.querySelector('#resendBtn').nextElementSibling.textContent = 'You can now resend the code';
+                }
+            }, 1000);
+        }
+
+        function resendOtp() {
+            const phone = document.getElementById('phone').value;
+            const email = document.getElementById('email').value;
+            const password = document.getElementById('password').value;
+            const name = document.getElementById('name').value;
+            fetch("{{ route('portal.register.submit') }}", {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').getAttribute('content'),
+                },
+                body: JSON.stringify({
+                    phone: phone,
+                    terms: 1,
+                    email,
+                    name,
+                    password
+                })
+            })
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success) {
+                        showAlert('Success', 'New OTP sent successfully');
+                        expiresAt = new Date(data.expires_at);
+                        startCountdown();
+                        startResendTimer();
+
+                        // Clear OTP inputs
+                        document.querySelectorAll('.otp-input').forEach(input => input.value = '');
+                        document.getElementById('otp').value = '';
+                        document.getElementById('verifyBtn').disabled = true;
+                        document.getElementById('otp1').focus();
+                    } else {
+                        showAlert('Error', data.message);
+                    }
+                })
+                .catch(error => {
+                    console.error('Error:', error);
+                    showAlert('Error', 'Failed to resend OTP. Please try again.');
+                });
+        }
+
+        function changePhoneNumber() {
+            document.getElementById('otpForm').classList.add('hidden');
+            document.getElementById('registrationForm').classList.remove('hidden');
+
+            // Clear timers
+            if (countdownTimer) clearInterval(countdownTimer);
+            if (resendTimer) clearInterval(resendTimer);
+
+            // Clear form fields
+            document.getElementById('name').value = '';
+            document.getElementById('email').value = '';
+            document.getElementById('phone').value = '';
+            document.getElementById('terms').checked = false;
+
+            // Clear OTP inputs
+            document.querySelectorAll('.otp-input').forEach(input => input.value = '');
+            document.getElementById('otp').value = '';
+            document.getElementById('verifyBtn').disabled = true;
+        }
+
+        // Enhanced OTP input handling
+        function handleOtpInput(element, nextElementId) {
+            // Only allow numbers
+            element.value = element.value.replace(/[^0-9]/g, '');
+
+            if (element.value.length >= 1 && nextElementId) {
+                document.getElementById(nextElementId).focus();
+            }
+
+            checkOtpComplete();
+        }
+
+        function checkOtpComplete() {
+            const inputs = document.querySelectorAll('.otp-input');
+            let otp = '';
+            inputs.forEach(input => otp += input.value);
+
+            document.getElementById('otp').value = otp;
+
+            if (otp.length === 6) {
+                document.getElementById('verifyBtn').disabled = false;
+                document.getElementById('verifyBtn').classList.add('bg-green-600', 'hover:bg-green-700');
+                document.getElementById('verifyBtn').classList.remove('bg-gray-400');
+            } else {
+                document.getElementById('verifyBtn').disabled = true;
+                document.getElementById('verifyBtn').classList.remove('bg-green-600', 'hover:bg-green-700');
+                document.getElementById('verifyBtn').classList.add('bg-gray-400');
+            }
+        }
+
+        // Email validation function
+        function isValidEmail(email) {
+            const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+            return emailRegex.test(email);
+        }
+
+        // Password validation and visual feedback
+        function initializePasswordValidation() {
+            const passwordInput = document.getElementById('password');
+            const lengthCheck = document.getElementById('lengthCheck');
+            const complexCheck = document.getElementById('complexCheck');
+
+            passwordInput.addEventListener('input', function() {
+                const password = this.value;
+
+                // Check length requirement
+                if (password.length >= 6) {
+                    lengthCheck.classList.remove('bg-gray-300');
+                    lengthCheck.classList.add('bg-green-500');
+                } else {
+                    lengthCheck.classList.remove('bg-green-500');
+                    lengthCheck.classList.add('bg-gray-300');
+                }
+
+                // Check complexity requirement
+                if (/(?=.*[a-zA-Z])(?=.*[0-9])/.test(password)) {
+                    complexCheck.classList.remove('bg-gray-300');
+                    complexCheck.classList.add('bg-green-500');
+                } else {
+                    complexCheck.classList.remove('bg-green-500');
+                    complexCheck.classList.add('bg-gray-300');
+                }
+            });
+        }
+
+        // Generate strong password
+        function generatePassword() {
+            const chars = 'ABCDEFGHJKMNPQRSTUVWXYZabcdefghjkmnpqrstuvwxyz23456789';
+            const specialChars = '!@#$%&*';
+            let password = '';
+
+            // Ensure we have at least one letter and one number
+            password += chars.charAt(Math.floor(Math.random() * 26)); // Letter
+            password += '23456789'.charAt(Math.floor(Math.random() * 8)); // Number
+
+            // Fill the rest randomly
+            for (let i = 2; i < 8; i++) {
+                if (i === 7 && Math.random() > 0.5) {
+                    password += specialChars.charAt(Math.floor(Math.random() * specialChars.length));
+                } else {
+                    password += chars.charAt(Math.floor(Math.random() * chars.length));
+                }
+            }
+
+            // Shuffle the password
+            password = password.split('').sort(() => Math.random() - 0.5).join('');
+
+            document.getElementById('password').value = password;
+            document.getElementById('password').dispatchEvent(new Event('input'));
+
+            // Show success message
+            showAlert('Success', 'Strong password generated! You can modify it if needed.');
+        }
+    </script>
+@endpush
