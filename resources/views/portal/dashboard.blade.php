@@ -95,11 +95,19 @@ $settings = new \App\Settings\GeneralSettings();
                     <!-- Time Remaining -->
                     @php
                         $timeRemaining = $activeSubscription->expires_at->diffForHumans(null, false, true);
+<<<<<<< HEAD
 
                         // Determine expiring soon based on package duration type
                         $package = $activeSubscription->package;
                         $isExpiringSoon = false;
 
+=======
+                        
+                        // Determine expiring soon based on package duration type
+                        $package = $activeSubscription->package;
+                        $isExpiringSoon = false;
+                        
+>>>>>>> 592cc4b1e92f976512818663196c0210c177dc63
                         if ($package->duration_type === 'minutely') {
                             // For minute packages, consider expiring soon if less than 20% of duration remains
                             $totalMinutes = $package->duration_value;
@@ -133,7 +141,11 @@ $settings = new \App\Settings\GeneralSettings();
 
             <!-- Connect Button -->
             <div class="text-center">
+<<<<<<< HEAD
                 <a href="http://192.168.77.1/logout"
+=======
+                <a href="http://192.168.77.1/login"
+>>>>>>> 592cc4b1e92f976512818663196c0210c177dc63
                    target="_blank"
                    class="inline-flex items-center space-x-2 bg-blue-600 text-white px-6 py-3 rounded-lg font-medium hover:bg-blue-700 transition-colors">
                     <i class="fas fa-external-link-alt"></i>
