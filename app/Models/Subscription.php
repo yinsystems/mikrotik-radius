@@ -231,9 +231,9 @@ class Subscription extends Model
         // Create authentication entry
         RadCheck::setPassword($this->username, $this->password);
         
-        // Set Max-All-Session for cumulative time tracking (individual user level)
+        // Set Session-Timeout for time-based packages (individual user level)
         if ($this->package->isTimeBased()) {
-            $this->setUserMaxAllSession();
+            $this->setUserSessionTimeout();
         }
         
         // Set individual user replies
@@ -245,8 +245,9 @@ class Subscription extends Model
             RadReply::setDataLimit($this->username, $this->package->data_limit * 1024 * 1024);
         }
         
-        if ($this->package->duration_type === 'hourly') {
-            RadReply::setSessionTimeout($this->username, $this->package->duration_value * 3600);
+        // Set Session-Timeout based on package duration type
+        if ($this->package->isTimeBased()) {
+            $this->setUserSessionTimeout();
         }
         
         if ($this->package->vlan_id) {
@@ -268,13 +269,13 @@ class Subscription extends Model
         // Remove individual expiration
         RadCheck::removeExpiration($this->username);
         
-        // Update Max-All-Session for cumulative time tracking
+        // Remove any old session timeout
         RadCheck::where('username', $this->username)
-                ->where('attribute', 'Max-All-Session')
+                ->where('attribute', 'Session-Timeout')
                 ->delete();
         
         if ($this->package->isTimeBased()) {
-            $this->setUserMaxAllSession();
+            $this->setUserSessionTimeout();
         }
         
         // Update password if changed
@@ -871,9 +872,9 @@ class Subscription extends Model
     }
     
     /**
-     * Set Max-All-Session for cumulative time tracking
+     * Set Session-Timeout for time-based packages
      */
-    private function setUserMaxAllSession()
+    private function setUserSessionTimeout()
     {
         // Calculate session duration in seconds based on package
         $totalSeconds = match($this->package->duration_type) {
@@ -886,13 +887,8 @@ class Subscription extends Model
             default => 24 * 3600 // Default to 1 day
         };
         
-        // Set Max-All-Session for this user (cumulative across all sessions)
-        RadCheck::create([
-            'username' => $this->username,
-            'attribute' => 'Max-All-Session',
-            'op' => ':=',
-            'value' => (string)$totalSeconds
-        ]);
+        // Set Session-Timeout for this user (per session limit)
+        RadCheck::setSessionTimeout($this->username, $totalSeconds);
     }
 
     /**
