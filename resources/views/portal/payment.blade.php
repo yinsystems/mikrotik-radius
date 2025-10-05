@@ -539,20 +539,13 @@
         setTimeout(() => {
             // Try to redirect, but provide fallback
             try {
-<<<<<<< HEAD
                 window.location.href = 'http://192.168.77.1/logout';
-=======
-                window.location.href = 'http://192.168.77.1/login';
->>>>>>> 592cc4b1e92f976512818663196c0210c177dc63
+
             } catch (error) {
                 // If redirect fails, show instructions with credentials
                 const customerPhone = "{{ $customer->phone ?? '' }}";
                 showPaymentStatus('success', 'Ready to Connect!',
-<<<<<<< HEAD
                     'Your subscription is active. Please navigate to http://192.168.77.1/logout in your browser to connect to the internet.',
-=======
-                    'Your subscription is active. Please navigate to http://192.168.77.1/login in your browser to connect to the internet.',
->>>>>>> 592cc4b1e92f976512818663196c0210c177dc63
                     `<div class="space-y-4">
                         ${customerPhone ? `
                         <div class="bg-blue-50 border border-blue-200 rounded-lg p-4 text-left">
