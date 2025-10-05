@@ -159,9 +159,9 @@ return [
             'email_body' => 'Your subscription has been activated successfully! Package: {package_name}, Valid until: {expires_at}. Username: {username}. Enjoy your service!',
         ],
         'expiration_warning' => [
-            'sms' => 'REMINDER: Your subscription "{package_name}" expires in {hours_remaining} hours on {expires_at}. Renew now to avoid interruption.',
+            'sms' => 'REMINDER: Your subscription "{package_name}" expires in {time_remaining_display} on {expires_at}. Renew now to avoid interruption. Tap: https://jaynet.vasgh.com/portal/login to renew!',
             'email_subject' => 'Subscription Expiring Soon - {package_name}',
-            'email_body' => 'REMINDER: Your subscription "{package_name}" will expire in {hours_remaining} hours on {expires_at}. Please renew your subscription to avoid service interruption.',
+            'email_body' => 'REMINDER: Your subscription "{package_name}" will expire in {time_remaining_display} on {expires_at}. Please renew your subscription to avoid service interruption.',
         ],
     ],
 

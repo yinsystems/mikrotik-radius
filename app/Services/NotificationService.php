@@ -189,6 +189,11 @@ class NotificationService
     public function sendExpirationWarning(array $customer, array $subscription): array
     {
         $hoursRemaining = $subscription['hours_remaining'] ?? 24;
+        $minutesRemaining = $subscription['minutes_remaining'] ?? ($hoursRemaining * 60);
+        $durationType = $subscription['duration_type'] ?? 'hourly';
+        
+        // Determine the appropriate time display based on duration type and remaining time
+        $timeDisplay = $this->formatTimeRemaining($durationType, $hoursRemaining, $minutesRemaining);
         
         return $this->send('expiration_warning', [
             'name' => $customer['name'],
@@ -199,7 +204,36 @@ class NotificationService
             'package_name' => $subscription['package_name'],
             'expires_at' => $subscription['expires_at'],
             'hours_remaining' => $hoursRemaining,
+            'minutes_remaining' => $minutesRemaining,
+            'time_remaining_display' => $timeDisplay,
+            'duration_type' => $durationType,
         ]);
+    }
+
+    /**
+     * Format time remaining display based on duration type
+     */
+    protected function formatTimeRemaining(string $durationType, int $hoursRemaining, int $minutesRemaining): string
+    {
+        // For minute packages, always show minutes if less than 2 hours
+        if ($durationType === 'minutely' || ($minutesRemaining > 0 && $minutesRemaining < 120)) {
+            if ($minutesRemaining <= 0) {
+                return 'less than 1 minute';
+            } elseif ($minutesRemaining == 1) {
+                return '1 minute';
+            } else {
+                return $minutesRemaining . ' minutes';
+            }
+        }
+        
+        // For longer durations, show hours
+        if ($hoursRemaining <= 0) {
+            return 'less than 1 hour';
+        } elseif ($hoursRemaining == 1) {
+            return '1 hour';
+        } else {
+            return $hoursRemaining . ' hours';
+        }
     }
 
     /**
