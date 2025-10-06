@@ -4,7 +4,6 @@
 
 @section('content')
 <div class="space-y-6">
-
     <!-- Header -->
     <div class="text-center">
         <div class="w-16 h-16 mx-auto mb-4 flex items-center justify-center">
