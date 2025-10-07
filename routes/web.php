@@ -22,6 +22,7 @@ Route::get('/', function () {
 Route::group(['prefix' => 'portal', 'as' => 'portal.'], function () {
     // Public routes (no session middleware needed)
     Route::get('/', [CaptivePortalController::class, 'index'])->name('index');
+    Route::get('/data-exhausted', [CaptivePortalController::class, 'showDataExhausted'])->name('data.exhausted');
     Route::get('/register', [CaptivePortalController::class, 'showRegistration'])->name('register');
     Route::post('/register', [CaptivePortalController::class, 'register'])->name('register.submit');
     Route::post('/verify-otp', [CaptivePortalController::class, 'verifyOtp'])->name('verify.otp');

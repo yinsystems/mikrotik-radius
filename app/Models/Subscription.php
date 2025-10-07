@@ -322,12 +322,23 @@ class Subscription extends Model
         switch ($this->status) {
             case 'active':
                 if (!$this->isExpired()) {
-                    RadCheck::unblockUser($this->username);
-                } else {
-                    // Redirect user to payment portal instead of blocking
-                    RadCheck::redirectUserForExpiration($this->username);
+                    // Set subscribed mode for active users
+                    RadCheck::setSubscribedMode($this->username, $this->getSessionTimeoutSeconds());
                     
-                    // Immediately disconnect active sessions via MikroTik API
+                    // Apply package-specific bandwidth limits if defined
+                    if ($this->package && ($this->package->upload_speed || $this->package->download_speed)) {
+                        RadReply::setBandwidthLimit(
+                            $this->username, 
+                            $this->package->upload_speed ?? 1024, 
+                            $this->package->download_speed ?? 1024
+                        );
+                    }
+                } else {
+                    // Put expired users in data exhausted mode
+                    RadCheck::setDataExhaustedMode($this->username);
+                    
+                    // Force disconnect active sessions
+                    RadCheck::forceDisconnectUser($this->username);
                     $this->disconnectActiveSessions();
                 }
                 break;
@@ -337,13 +348,16 @@ class Subscription extends Model
                 RadCheck::blockUserForSuspension($this->username);
                 
                 // Disconnect active sessions for suspended/blocked users
+                RadCheck::forceDisconnectUser($this->username);
                 $this->disconnectActiveSessions();
                 break;
                 
             case 'expired':
-                RadCheck::redirectUserForExpiration($this->username);
+                // Put expired users in data exhausted mode
+                RadCheck::setDataExhaustedMode($this->username);
                 
-                // Disconnect active sessions for expired users
+                // Force disconnect active sessions
+                RadCheck::forceDisconnectUser($this->username);
                 $this->disconnectActiveSessions();
                 break;
                 
@@ -371,6 +385,9 @@ class Subscription extends Model
     // Status management with RADIUS integration
     public function activate()
     {
+        // Remove user from data-exhausted list when activating
+        RadReply::removeFromAddressList($this->username, 'data-exhausted-users');
+        
         $this->update(['status' => 'active']);
         $this->syncRadiusStatus();
         
