@@ -385,7 +385,7 @@ class ReddePaymentService
         // Prepare payment data
         $paymentData = [
             'amount' => $data['amount'],
-            'vouchercode' => $data['voucher_code'],
+            'vouchercode' => @$data['voucher_code'],
             'phone_number' => $formattedPhone,
             'payment_option' => strtoupper($data['payment_option']),
             'description' => $data['description'] ?? 'Subscription payment',
