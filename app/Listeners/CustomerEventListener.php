@@ -21,10 +21,10 @@ class CustomerEventListener
         if (!$customer->registration_date) {
             $customer->update(['registration_date' => now()]);
         }
-        
+
         // Auto-assign trial package for new customers
         $this->assignTrialPackage($customer);
-        
+
         // Send welcome notification with account details
         $this->sendWelcomeNotification($customer);
     }
@@ -33,11 +33,11 @@ class CustomerEventListener
     {
         // Check if status changed
         $dirty = $customer->getDirty();
-        
+
         if (isset($dirty['status'])) {
             $oldStatus = $customer->getOriginal('status');
             $newStatus = $customer->status;
-            
+
             // Handle status change logic
             switch ($newStatus) {
                 case 'suspended':
@@ -46,14 +46,14 @@ class CustomerEventListener
                         $customer->syncAllRadiusStatus();
                     }
                     break;
-                    
+
                 case 'active':
                     if (in_array($oldStatus, ['suspended', 'blocked'])) {
                         // Customer was resumed/unblocked - sync all RADIUS status
                         $customer->syncAllRadiusStatus();
                     }
                     break;
-                    
+
                 case 'blocked':
                     if ($oldStatus !== 'blocked') {
                         // Customer was just blocked - sync all RADIUS status and terminate sessions
@@ -100,18 +100,23 @@ class CustomerEventListener
             if ($trialPackage) {
                 // Create trial subscription
                 $subscription = $customer->createSubscription($trialPackage->id);
-                
+
                 // Activate the trial subscription immediately
                 $subscription->activate();
-                
+
+                // Generate internet token for trial users
+                if (!$customer->hasValidInternetToken()) {
+                    $customer->generateInternetToken();
+                }
+
                 // Log the trial assignment
                 $customer->update([
-                    'notes' => ($customer->notes ? $customer->notes . "\n" : '') . 
+                    'notes' => ($customer->notes ? $customer->notes . "\n" : '') .
                               "Auto-assigned trial package '{$trialPackage->name}' on " . now()->format('Y-m-d H:i:s')
                 ]);
 
                 \Log::info("Trial package '{$trialPackage->name}' auto-assigned to customer {$customer->id}");
-                
+
                 // Send trial assignment notification
                 $this->sendTrialAssignmentNotification($customer, $trialPackage, $subscription);
             }
@@ -140,7 +145,7 @@ class CustomerEventListener
             ], $credentials);
 
             \Log::info("Welcome notification sent to customer {$customer->id}");
-            
+
         } catch (\Exception $e) {
             \Log::error("Failed to send welcome notification to customer {$customer->id}: " . $e->getMessage());
         }
@@ -162,7 +167,7 @@ class CustomerEventListener
             ]);
 
             \Log::info("Trial assignment notification sent to customer {$customer->id} for package {$package->id}");
-            
+
         } catch (\Exception $e) {
             \Log::error("Failed to send trial assignment notification to customer {$customer->id}: " . $e->getMessage());
         }
