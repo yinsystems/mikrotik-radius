@@ -181,6 +181,13 @@ $settings= new \App\Settings\GeneralSettings();
         @endif
 
         <div class="space-y-4">
+            <!-- Browse Packages Button (no authentication required) -->
+            <a href="{{ route('portal.packages') }}"
+               class="w-full bg-green-600 text-white py-3 px-4 rounded-lg font-medium hover:bg-green-700 transition-colors flex items-center justify-center space-x-2 border-2 border-transparent hover:border-green-500">
+                <i class="fas fa-eye"></i>
+                <span>Browse All Packages</span>
+            </a>
+
             <!-- New User Button with Free Trial Promotion -->
             <div class="relative">
                 <!-- Free Trial Badge -->

@@ -300,6 +300,35 @@ class EditCustomer extends EditRecord
                             ->duration(5000)
                             ->send();
                     }),
+
+                Actions\Action::make('regenerate_token')
+                    ->label('Regenerate WiFi Token')
+                    ->icon('heroicon-o-key')
+                    ->color('warning')
+                    ->requiresConfirmation()
+                    ->modalHeading('Regenerate WiFi Token')
+                    ->modalDescription('Are you sure you want to regenerate the WiFi token? This will disconnect the customer from WiFi.')
+                    ->modalSubmitActionLabel('Regenerate Token')
+                    ->action(function (Customer $record) {
+                        $activeSubscription = $record->getActiveSubscription();
+                        if (!$activeSubscription) {
+                            Notification::make()
+                                ->title('No Active Subscription')
+                                ->body('Customer must have an active subscription to generate WiFi token.')
+                                ->warning()
+                                ->send();
+                            return;
+                        }
+
+                        $newToken = $record->regenerateInternetToken();
+                        
+                        Notification::make()
+                            ->title('WiFi Token Regenerated')
+                            ->body("New WiFi token generated: {$newToken}")
+                            ->success()
+                            ->duration(10000)
+                            ->send();
+                    }),
             ])
             ->label('Customer Actions')
             ->icon('heroicon-o-cog-6-tooth')

@@ -122,9 +122,9 @@ return [
     */
     'templates' => [
         'welcome' => [
-            'sms' => "Welcome to JayNet WI-FI! Account:\n{username}\nPassword: {password}\nUrl:http://jaynet.local.com. Connect using these credentials.",
+            'sms' => "Welcome to JayNet WI-FI! Portal Login:\n{username}\nPassword: {password}\nYour WiFi token will be provided after subscription purchase. Visit: http://jaynet.local.com",
             'email_subject' => 'Welcome to JayNet WI-FI - Account Created',
-            'email_body' => 'Welcome to JayNet WI-FI! Your account has been created successfully. Username: {username}, Password: {password}. Please use these credentials to connect to our network.',
+            'email_body' => 'Welcome to JayNet WI-FI! Your portal account has been created successfully. Portal Login - Username: {username}, Password: {password}. After purchasing a subscription, you will receive a separate 6-digit WiFi token for internet access.',
         ],
         'trial_assignment' => [
             'sms' => 'Free trial package "{package_name}" activated! Valid until {expires_at}. Enjoy True Freedom - Unlimited browsing!',
@@ -132,16 +132,19 @@ return [
             'email_body' => 'Great news! Your trial package "{package_name}" has been activated and is valid until {expires_at}. Enjoy True Freedom - Unlimited browsing!',
         ],
         'setup_instructions' => [
-            'sms' => 'Welcome to JayNet WiFi! Connect to our network, then visit http://jaynet.local.com and login with Username: {username} | Password: {password}',
+            'sms' => 'JayNet WiFi Ready! Connect using - Username: {username} | WiFi Token: {token} | Portal access at: http://jaynet.local.com',
             'email_subject' => 'Your JayNet WiFi Access Details',
             'email_body' => 'Welcome to JayNet WiFi!
                     To get connected, follow these simple steps:
 
                     1. Connect to the JayNet WiFi network
-                    2. Open your browser and go to: http://jaynet.local.com
-                    3. Enter your credentials:
-                    • Username: {username}
-                    • Password: {password}
+                    2. Enter your WiFi credentials:
+                       • Username: {username}
+                       • WiFi Token: {token}
+
+                    3. For account management, visit: http://jaynet.local.com
+                       • Portal Username: {username}
+                       • Portal Password: {password}
 
                     Need help? Contact our support team.
 
@@ -154,16 +157,12 @@ return [
             'email_body' => 'Your payment has been processed successfully. Amount: {amount} {currency}, Transaction ID: {transaction_id}. Thank you for your payment!',
         ],
         'subscription_activated' => [
-            'sms' => 'Subscription activated! Package: {package_name}, Valid until: {expires_at}. Username: {username}',
+            'sms' => 'Subscription activated! Package: {package_name}, Valid until: {expires_at}. WiFi Token: {token} | Username: {username}',
             'email_subject' => 'Subscription Activated - {package_name}',
-            'email_body' => 'Your subscription has been activated successfully! Package: {package_name}, Valid until: {expires_at}. Username: {username}. Enjoy your service!',
+            'email_body' => 'Your subscription has been activated successfully! Package: {package_name}, Valid until: {expires_at}. WiFi Connection Details - Username: {username}, WiFi Token: {token}. Enjoy your service!',
         ],
         'expiration_warning' => [
-<<<<<<< HEAD
             'sms' => 'REMINDER: Your subscription expires in {time_remaining_display}. Renew now to avoid interruption. Tap: http://jaynet.local.com/logout to renew!',
-=======
-            'sms' => 'REMINDER: Your subscription "{package_name}" expires in {time_remaining_display} on {expires_at}. Renew now to avoid interruption. Tap: https://jaynet.vasgh.com/portal/login to renew!',
->>>>>>> 592cc4b1e92f976512818663196c0210c177dc63
             'email_subject' => 'Subscription Expiring Soon - {package_name}',
             'email_body' => 'REMINDER: Your subscription "{package_name}" will expire in {time_remaining_display} on {expires_at}. Please renew your subscription to avoid service interruption.',
         ],

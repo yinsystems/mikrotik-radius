@@ -403,18 +403,18 @@
                             const credentials = response.credentials;
                             const credentialsHtml = credentials ?
                                 `<div class="bg-blue-50 border border-blue-200 rounded-lg p-4 mb-4 text-left">
-                                    <h4 class="font-medium text-blue-900 mb-2">Your Internet Login Details:</h4>
+                                    <h4 class="font-medium text-blue-900 mb-2">Your WiFi Connection Details:</h4>
                                     <div class="space-y-2 text-sm">
                                         <div class="flex justify-between items-center">
                                             <span class="text-blue-700">Username:</span>
                                             <span class="font-mono font-medium">${credentials.username}</span>
                                         </div>
                                         <div class="flex justify-between items-center">
-                                            <span class="text-blue-700">Password:</span>
-                                            <span class="font-mono font-medium">${credentials.password}</span>
+                                            <span class="text-blue-700">WiFi Token:</span>
+                                            <span class="font-mono font-medium text-lg font-bold text-green-600">${credentials.token || 'Generating...'}</span>
                                         </div>
                                     </div>
-                                    <p class="text-xs text-blue-600 mt-2">Use these details to log in at the router page.</p>
+                                    <p class="text-xs text-blue-600 mt-2">Use these details to connect to WiFi. Note: You also have a separate portal password for account access.</p>
                                 </div>` : '';
 
                             showPaymentStatus('success', 'Payment Successful!',
@@ -602,17 +602,18 @@
                     `<div class="space-y-4">
                         ${customerPhone ? `
                         <div class="bg-blue-50 border border-blue-200 rounded-lg p-4 text-left">
-                            <h4 class="font-medium text-blue-900 mb-2">Your Login Details:</h4>
+                            <h4 class="font-medium text-blue-900 mb-2">Your WiFi Connection Details:</h4>
                             <div class="space-y-2 text-sm">
                                 <div class="flex justify-between items-center">
                                     <span class="text-blue-700">Username:</span>
                                     <span class="font-mono font-medium">${customerPhone}</span>
                                 </div>
                                 <div class="flex justify-between items-center">
-                                    <span class="text-blue-700">Password:</span>
-                                    <span class="font-mono font-medium">${customerPhone}</span>
+                                    <span class="text-blue-700">WiFi Token:</span>
+                                    <span class="font-mono font-medium text-lg font-bold text-green-600">{{ $customer->internet_token ?? 'Generating...' }}</span>
                                 </div>
                             </div>
+                            <p class="text-xs text-blue-600 mt-2">Use these details to connect to WiFi. Check your dashboard for the current token.</p>
                         </div>` : ''}
                         <div class="space-y-2">
                             <button onclick="window.open('http://192.168.77.1/login', '_blank')"

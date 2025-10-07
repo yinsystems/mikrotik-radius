@@ -23,12 +23,15 @@ class Customer extends Model
         'status', // 'active', 'suspended', 'blocked'
         'registration_date',
         'last_login',
-        'notes'
+        'notes',
+        'internet_token', // 6-digit token for WiFi authentication
+        'token_generated_at' // When the current token was generated
     ];
 
     protected $casts = [
         'registration_date' => 'datetime',
-        'last_login' => 'datetime'
+        'last_login' => 'datetime',
+        'token_generated_at' => 'datetime'
     ];
 
     // Relationships
@@ -738,5 +741,93 @@ class Customer extends Model
             'message' => 'Password reset instructions sent to your email/phone',
             'token' => $token // In production, don't return the token
         ];
+    }
+
+    // Internet Token Management Methods
+    
+    /**
+     * Generate a new 6-digit internet token for WiFi authentication
+     */
+    public function generateInternetToken()
+    {
+        $token = str_pad(random_int(100000, 999999), 6, '0', STR_PAD_LEFT);
+        
+        // Ensure token is unique across all customers
+        while (self::where('internet_token', $token)->exists()) {
+            $token = str_pad(random_int(100000, 999999), 6, '0', STR_PAD_LEFT);
+        }
+        
+        $this->update([
+            'internet_token' => $token,
+            'token_generated_at' => now()
+        ]);
+        
+        // Create RADIUS entries with the new token
+        $this->createRadiusEntries();
+        
+        \Log::info("Generated new internet token for customer {$this->username}: {$token}");
+        
+        return $token;
+    }
+    
+    /**
+     * Create RADIUS authentication entries using the internet token
+     */
+    public function createRadiusEntries()
+    {
+        if (!$this->internet_token) {
+            return false;
+        }
+        
+        // Create RadCheck entry for authentication
+        RadCheck::updateOrCreate(
+            ['username' => $this->username, 'attribute' => 'Cleartext-Password'],
+            ['op' => ':=', 'value' => $this->internet_token]
+        );
+        
+        \Log::info("Created RADIUS entries for customer {$this->username} with token authentication");
+        
+        return true;
+    }
+    
+    /**
+     * Remove all RADIUS entries for this customer (except accounting)
+     */
+    public function removeRadiusEntries()
+    {
+        RadCheck::where('username', $this->username)->delete();
+        RadReply::where('username', $this->username)->delete();
+        
+        \Log::info("Removed all RADIUS entries for customer {$this->username}");
+        
+        return true;
+    }
+    
+    /**
+     * Check if customer has a valid internet token
+     */
+    public function hasValidInternetToken()
+    {
+        return !empty($this->internet_token) && !empty($this->token_generated_at);
+    }
+    
+    /**
+     * Get the internet token for display/SMS purposes
+     */
+    public function getInternetToken()
+    {
+        return $this->internet_token;
+    }
+    
+    /**
+     * Regenerate internet token (for new subscriptions)
+     */
+    public function regenerateInternetToken()
+    {
+        // Remove old RADIUS entries
+        $this->removeRadiusEntries();
+        
+        // Generate new token and create new RADIUS entries
+        return $this->generateInternetToken();
     }
 }

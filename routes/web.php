@@ -31,17 +31,21 @@ Route::group(['prefix' => 'portal', 'as' => 'portal.'], function () {
     
     // Settings check routes
     Route::get('/otp-status', [CaptivePortalController::class, 'getOtpStatus'])->name('otp.status');
+    
+    // Public package viewing (no authentication required)
+    Route::get('/packages', [CaptivePortalController::class, 'showPackages'])->name('packages');
+    
+    // Public payment routes (no authentication required, but phone must be registered)
+    Route::get('/payment', [CaptivePortalController::class, 'showPayment'])->name('payment');
+    Route::post('/process-payment', [CaptivePortalController::class, 'processPayment'])->name('process.payment');
+    Route::post('/check-payment-status', [CaptivePortalController::class, 'checkPaymentStatus'])->name('check.payment.status');
+    
+    // Phone number check endpoint (for checking if phone is registered)
+    Route::post('/check-phone', [CaptivePortalController::class, 'checkPhoneRegistration'])->name('check.phone');
+    Route::post('/select-package', [CaptivePortalController::class, 'selectPackage'])->name('select.package');
 
     // Protected routes (require session management)
     Route::middleware(['portal.session'])->group(function () {
-        // Package selection (user must be logged in)
-        Route::get('/packages', [CaptivePortalController::class, 'showPackages'])->name('packages');
-        Route::post('/select-package', [CaptivePortalController::class, 'selectPackage'])->name('select.package');
-
-        // Payment (user must be logged in and have selected package)
-        Route::get('/payment', [CaptivePortalController::class, 'showPayment'])->name('payment');
-        Route::post('/process-payment', [CaptivePortalController::class, 'processPayment'])->name('process.payment');
-        Route::post('/check-payment-status', [CaptivePortalController::class, 'checkPaymentStatus'])->name('check.payment.status');
 
         // Dashboard (user must be logged in)
         Route::get('/dashboard', [CaptivePortalController::class, 'showDashboard'])->name('dashboard');

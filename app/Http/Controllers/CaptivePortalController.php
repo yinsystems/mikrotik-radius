@@ -238,45 +238,57 @@ class CaptivePortalController extends Controller
      */
     public function showPackages()
     {
-        $phone = Session::get('customer_phone');
-        if (!$phone) {
-            return redirect()->route('portal.register');
-        }
-
-        $customer = Customer::where('phone', $phone)->first();
-        if (!$customer) {
-            return redirect()->route('portal.register');
-        }
-
+        // Get packages for unauthenticated users
         $packages = Package::where('is_active', true)->where('is_trial', false)->get();
         $settings = SettingsHelper::general();
 
-        // Check purchase eligibility and get active subscription details
-        $activeSubscription = $customer->getActiveSubscription();
-        $hasActive = $activeSubscription !== null;
-
-        // Get package history - last 5 subscriptions
-        $packageHistory = $customer->subscriptions()
-            ->with(['package', 'payment'])
-            ->where('status', '!=', 'pending')
-            ->orderBy('created_at', 'desc')
-            ->limit(5)
-            ->get();
-
+        // Check if user is authenticated for additional features
+        $phone = Session::get('customer_phone');
+        $customer = null;
         $purchaseCheck = [
-            'eligible' => !$hasActive,
-            'has_active' => $hasActive,
+            'eligible' => true,
+            'has_active' => false,
             'message' => null,
             'warning' => null,
-            'active_subscription' => $activeSubscription
+            'active_subscription' => null,
+            'authenticated' => false
         ];
+        $packageHistory = collect();
 
-        if ($hasActive) {
-            $purchaseCheck['message'] = 'You have an active subscription. New package will replace your current subscription.';
-            $purchaseCheck['warning'] = 'Purchasing a new package will replace your current active subscription. Any remaining time on your current package will be lost.';
+        if ($phone) {
+            $customer = Customer::where('phone', $phone)->first();
+            if ($customer) {
+                $purchaseCheck['authenticated'] = true;
+                
+                // Check purchase eligibility and get active subscription details
+                $activeSubscription = $customer->getActiveSubscription();
+                $hasActive = $activeSubscription !== null;
+
+                // Get package history - last 5 subscriptions
+                $packageHistory = $customer->subscriptions()
+                    ->with(['package', 'payment'])
+                    ->where('status', '!=', 'pending')
+                    ->orderBy('created_at', 'desc')
+                    ->limit(5)
+                    ->get();
+
+                $purchaseCheck = [
+                    'eligible' => !$hasActive,
+                    'has_active' => $hasActive,
+                    'message' => null,
+                    'warning' => null,
+                    'active_subscription' => $activeSubscription,
+                    'authenticated' => true
+                ];
+
+                if ($hasActive) {
+                    $purchaseCheck['message'] = 'You have an active subscription. New package will replace your current subscription.';
+                    $purchaseCheck['warning'] = 'Purchasing a new package will replace your current active subscription. Any remaining time on your current package will be lost.';
+                }
+            }
         }
 
-        return view('portal.packages', compact('packages', 'settings', 'purchaseCheck', 'packageHistory'));
+        return view('portal.packages', compact('packages', 'settings', 'purchaseCheck', 'packageHistory', 'customer'));
     }
 
     /**
@@ -296,6 +308,9 @@ class CaptivePortalController extends Controller
 
         $activeSubscription = $customer->getActiveSubscription();
         $settings = SettingsHelper::general();
+        
+        // Get internet token for WiFi access
+        $internetToken = $customer->getInternetToken();
 
         // Get complete package history for dashboard
         $packageHistory = $customer->subscriptions()
@@ -303,7 +318,7 @@ class CaptivePortalController extends Controller
             ->orderBy('created_at', 'desc')
             ->paginate(10);
 
-        return view('portal.dashboard', compact('customer', 'activeSubscription', 'settings', 'packageHistory'));
+        return view('portal.dashboard', compact('customer', 'activeSubscription', 'settings', 'packageHistory', 'internetToken'));
     }
 
     /**
@@ -313,6 +328,7 @@ class CaptivePortalController extends Controller
     {
         $validator = Validator::make($request->all(), [
             'package_id' => 'required|exists:packages,id',
+            'phone' => 'required|string|regex:/^\+?[0-9]{10,15}$/',
         ]);
 
         if ($validator->fails()) {
@@ -322,20 +338,23 @@ class CaptivePortalController extends Controller
             ], 422);
         }
 
-        $phone = Session::get('customer_phone');
-        $customerId = Session::get('customer_id');
-
-        if (!$phone || !$customerId) {
+        // Check if phone number is registered
+        $customer = Customer::where('phone', $request->phone)->first();
+        
+        if (!$customer) {
             return response()->json([
                 'success' => false,
-                'message' => 'Session expired. Please register again.'
-            ], 400);
+                'message' => 'Phone number not registered. Please register first.',
+                'show_registration_popup' => true
+            ], 422);
         }
 
         $package = Package::findOrFail($request->package_id);
 
-        // Store selected package in session
+        // Store package and customer info in session for payment
         Session::put('selected_package_id', $package->id);
+        Session::put('payment_customer_phone', $request->phone);
+        Session::put('payment_customer_id', $customer->id);
 
         return response()->json([
             'success' => true,
@@ -350,16 +369,26 @@ class CaptivePortalController extends Controller
      */
     public function showPayment()
     {
-        $phone = Session::get('customer_phone');
-        $customerId = Session::get('customer_id');
         $packageId = Session::get('selected_package_id');
+        $customerPhone = Session::get('payment_customer_phone');
+        $customerId = Session::get('payment_customer_id');
 
-        if (!$phone || !$customerId || !$packageId) {
-            return redirect()->route('portal.index');
+        if (!$packageId) {
+            return redirect()->route('portal.packages')->with('error', 'Please select a package first.');
         }
 
-        $customer = Customer::findOrFail($customerId);
+        // If no customer info in session, redirect to packages with error
+        if (!$customerPhone || !$customerId) {
+            return redirect()->route('portal.packages')->with('error', 'Please provide your phone number and select a package.');
+        }
+
+        $customer = Customer::find($customerId);
         $package = Package::findOrFail($packageId);
+        
+        if (!$customer || $customer->phone !== $customerPhone) {
+            return redirect()->route('portal.packages')->with('error', 'Invalid customer information.');
+        }
+
         $settings = SettingsHelper::general();
 
         return view('portal.payment', compact('customer', 'package', 'settings'));
@@ -532,13 +561,14 @@ class CaptivePortalController extends Controller
             ], 422);
         }
 
-        $phone = Session::get('customer_phone');
-        $customerId = Session::get('customer_id');
+        // Check for payment-specific session variables first, then fall back to regular session
+        $phone = Session::get('payment_customer_phone') ?? Session::get('customer_phone');
+        $customerId = Session::get('payment_customer_id') ?? Session::get('customer_id');
 
         if (!$phone || !$customerId) {
             return response()->json([
                 'success' => false,
-                'message' => 'Session expired. Please login again.'
+                'message' => 'Session expired. Please select a package again.'
             ], 400);
         }
 
@@ -644,7 +674,8 @@ class CaptivePortalController extends Controller
                     'router_redirect' => true,
                     'credentials' => [
                         'username' => $payment->customer->username,
-                        'password' => $payment->customer->password
+                        'token' => $payment->customer->internet_token,
+                        'password' => $payment->customer->password // Portal password for reference
                     ]
                 ]);
             }
@@ -688,7 +719,8 @@ class CaptivePortalController extends Controller
                             'router_redirect' => true,
                             'credentials' => [
                                 'username' => $payment->customer->username,
-                                'password' => $payment->customer->password
+                                'token' => $payment->customer->internet_token,
+                                'password' => $payment->customer->password // Portal password for reference
                             ]
                         ]);
                     } elseif ($newStatus === 'failed') {
@@ -957,4 +989,43 @@ class CaptivePortalController extends Controller
             ]);
         }
     }
+
+    /**
+     * Show data exhausted page for users who need to renew
+     */
+    public function showDataExhausted()
+    {
+        $settings = SettingsHelper::general();
+        $packages = Package::where('status', 'active')->get();
+        
+        return view('portal.data-exhausted', compact('settings', 'packages'));
+    }
+
+    /**
+     * Check if phone number is registered (public endpoint)
+     */
+    public function checkPhoneRegistration(Request $request)
+    {
+        $validator = Validator::make($request->all(), [
+            'phone' => 'required|string|regex:/^\+?[0-9]{10,15}$/',
+        ]);
+
+        if ($validator->fails()) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Invalid phone number format',
+                'errors' => $validator->errors()
+            ], 422);
+        }
+
+        $customer = Customer::where('phone', $request->phone)->first();
+
+        return response()->json([
+            'success' => true,
+            'registered' => $customer !== null,
+            'phone' => $request->phone
+        ]);
+    }
+
+
 }

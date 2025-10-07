@@ -74,14 +74,14 @@
                 <!-- Password -->
                 <div>
                     <label for="password" class="block text-sm font-medium text-gray-700 mb-2">
-                        WiFi Password *
+                        Portal Password *
                     </label>
                     <div class="relative">
                         <input type="text"
                                id="password"
                                name="password"
                                class="w-full px-4 py-3 pr-12 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                               placeholder="Create your WiFi password"
+                               placeholder="Create your portal password"
                                minlength="6"
                                required>
                         <div class="absolute inset-y-0 right-0 pr-3 flex items-center">
@@ -106,7 +106,7 @@
                         </div>
                         <p class="text-xs text-blue-600 mt-1">
                             <i class="fas fa-info-circle mr-1"></i>
-                            This password will be used to connect to WiFi (Username: your phone number)
+                            This password is for portal access only. After purchase, you'll get a separate 6-digit WiFi token for internet connection.
                         </p>
                     </div>
                 </div>

@@ -70,7 +70,7 @@ $settings  = new GeneralSettings();
                 <!-- Password Field (Hidden by default, shown when OTP is disabled) -->
                 <div id="passwordField" class="hidden">
                     <label for="loginPassword" class="block text-sm font-medium text-gray-700 mb-2">
-                        WiFi Password *
+                        Portal Password *
                     </label>
                     <input type="password"
                            id="loginPassword"

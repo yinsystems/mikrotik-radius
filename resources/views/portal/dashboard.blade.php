@@ -254,124 +254,33 @@ $settings = new \App\Settings\GeneralSettings();
                     </div>
                 </div>
                 <div class="flex items-center justify-between">
-                    <span class="text-blue-700 font-medium">Password:</span>
+                    <span class="text-blue-700 font-medium">WiFi Token:</span>
                     <div class="flex items-center space-x-2">
-                        <span id="currentPassword" class="font-mono bg-white px-3 py-1 rounded border text-blue-900">
-                            {{ $customer->password ? str_repeat('•', strlen($customer->password)) : 'Not set' }}
-                        </span>
-                        <button onclick="togglePasswordVisibility('currentPassword', '{{ $customer->password ?? '' }}')"
-                                class="text-blue-600 hover:text-blue-700" title="Show/hide password">
-                            <i id="currentPasswordIcon" class="fas fa-eye"></i>
-                        </button>
-                        @if($customer->password)
-                        <button onclick="copyToClipboard('{{ $customer->password }}', 'Password')"
-                                class="text-blue-600 hover:text-blue-700" title="Copy password">
-                            <i class="fas fa-copy"></i>
-                        </button>
+                        @if($customer->hasValidInternetToken())
+                            <span id="currentToken" class="font-mono bg-white px-3 py-1 rounded border text-blue-900 text-lg font-bold tracking-wider">
+                                {{ $customer->internet_token }}
+                            </span>
+                            <button onclick="copyToClipboard('{{ $customer->internet_token }}', 'WiFi Token')"
+                                    class="text-blue-600 hover:text-blue-700" title="Copy WiFi token">
+                                <i class="fas fa-copy"></i>
+                            </button>
+                        @else
+                            <span class="text-gray-500 italic">Token available after subscription purchase</span>
                         @endif
                     </div>
                 </div>
             </div>
             <div class="mt-3 p-3 bg-blue-100 rounded text-sm text-blue-800">
                 <i class="fas fa-info-circle mr-1"></i>
-                Use these credentials to connect to the WiFi network after purchasing a package.
+                @if($customer->hasValidInternetToken())
+                    Use these credentials to connect to WiFi: Username ({{ $customer->phone }}) + Token ({{ $customer->internet_token }})
+                @else
+                    Purchase a subscription to get your WiFi token. You'll use your phone number as username and a 6-digit token.
+                @endif
             </div>
         </div>
 
-        <!-- Change Password Form -->
-        <div class="border-t border-gray-200 pt-6">
-            <h4 class="font-medium text-gray-900 mb-4 flex items-center">
-                <i class="fas fa-lock text-green-600 mr-2"></i>
-                Change WiFi Password
-            </h4>
 
-            <form id="changePasswordForm" class="space-y-4">
-                @csrf
-
-                <!-- Current Password -->
-                <div>
-                    <label for="currentPasswordInput" class="block text-sm font-medium text-gray-700 mb-2">
-                        Current Password *
-                    </label>
-                    <div class="relative">
-                        <input type="password"
-                               id="currentPasswordInput"
-                               name="current_password"
-                               class="w-full px-4 py-3 pr-12 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                               placeholder="Enter current password"
-                               required>
-                        <button type="button"
-                                onclick="togglePasswordInput('currentPasswordInput')"
-                                class="absolute inset-y-0 right-0 pr-3 flex items-center text-gray-400 hover:text-gray-600">
-                            <i id="currentPasswordInputIcon" class="fas fa-eye"></i>
-                        </button>
-                    </div>
-                </div>
-
-                <!-- New Password -->
-                <div>
-                    <label for="newPassword" class="block text-sm font-medium text-gray-700 mb-2">
-                        New Password *
-                    </label>
-                    <div class="relative">
-                        <input type="text"
-                               id="newPassword"
-                               name="new_password"
-                               class="w-full px-4 py-3 pr-12 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                               placeholder="Enter new password"
-                               minlength="6"
-                               required>
-                        <button type="button"
-                                onclick="generateNewPassword()"
-                                class="absolute inset-y-0 right-0 pr-3 flex items-center text-blue-600 hover:text-blue-700"
-                                title="Generate strong password">
-                            <i class="fas fa-magic"></i>
-                        </button>
-                    </div>
-
-                    <!-- Password strength indicators -->
-                    <div class="mt-2">
-                        <div class="flex items-center space-x-4 text-xs">
-                            <div class="flex items-center space-x-1">
-                                <div id="newLengthCheck" class="w-2 h-2 rounded-full bg-gray-300"></div>
-                                <span class="text-gray-600">6+ characters</span>
-                            </div>
-                            <div class="flex items-center space-x-1">
-                                <div id="newComplexCheck" class="w-2 h-2 rounded-full bg-gray-300"></div>
-                                <span class="text-gray-600">Letters & numbers</span>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-
-                <!-- Confirm New Password -->
-                <div>
-                    <label for="confirmPassword" class="block text-sm font-medium text-gray-700 mb-2">
-                        Confirm New Password *
-                    </label>
-                    <input type="text"
-                           id="confirmPassword"
-                           name="confirm_password"
-                           class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                           placeholder="Confirm new password"
-                           required>
-                    <div id="passwordMatchIndicator" class="mt-1 text-xs hidden">
-                        <span id="passwordMatchText"></span>
-                    </div>
-                </div>
-
-                <!-- Submit Button -->
-                <button type="submit"
-                        class="w-full bg-green-600 text-white py-3 px-4 rounded-lg font-medium hover:bg-green-700 transition-colors btn-loading"
-                        id="changePasswordBtn">
-                    <span class="btn-text">
-                        <i class="fas fa-save mr-2"></i>
-                        Update WiFi Password
-                    </span>
-                    <div class="spinner hidden"></div>
-                </button>
-            </form>
-        </div>
     </div>
 
 {{--    <!-- Package History Section -->--}}
@@ -620,172 +529,7 @@ $settings = new \App\Settings\GeneralSettings();
         }
     }
 
-    // Generate new password
-    function generateNewPassword() {
-        const chars = 'ABCDEFGHJKMNPQRSTUVWXYZabcdefghjkmnpqrstuvwxyz23456789';
-        const specialChars = '!@#$%&*';
-        let password = '';
 
-        // Ensure we have at least one letter and one number
-        password += chars.charAt(Math.floor(Math.random() * 26)); // Letter
-        password += '23456789'.charAt(Math.floor(Math.random() * 8)); // Number
-
-        // Fill the rest randomly
-        for (let i = 2; i < 8; i++) {
-            if (i === 7 && Math.random() > 0.5) {
-                password += specialChars.charAt(Math.floor(Math.random() * specialChars.length));
-            } else {
-                password += chars.charAt(Math.floor(Math.random() * chars.length));
-            }
-        }
-
-        // Shuffle the password
-        password = password.split('').sort(() => Math.random() - 0.5).join('');
-
-        document.getElementById('newPassword').value = password;
-        document.getElementById('confirmPassword').value = password;
-
-        // Trigger validation
-        document.getElementById('newPassword').dispatchEvent(new Event('input'));
-        document.getElementById('confirmPassword').dispatchEvent(new Event('input'));
-
-        showAlert('Success', 'Strong password generated and filled in both fields!');
-    }
-
-    // Password validation for change password form
-    document.addEventListener('DOMContentLoaded', function() {
-        const newPasswordInput = document.getElementById('newPassword');
-        const confirmPasswordInput = document.getElementById('confirmPassword');
-        const newLengthCheck = document.getElementById('newLengthCheck');
-        const newComplexCheck = document.getElementById('newComplexCheck');
-        const passwordMatchIndicator = document.getElementById('passwordMatchIndicator');
-        const passwordMatchText = document.getElementById('passwordMatchText');
-
-        newPasswordInput.addEventListener('input', function() {
-            const password = this.value;
-
-            // Check length requirement
-            if (password.length >= 6) {
-                newLengthCheck.classList.remove('bg-gray-300');
-                newLengthCheck.classList.add('bg-green-500');
-            } else {
-                newLengthCheck.classList.remove('bg-green-500');
-                newLengthCheck.classList.add('bg-gray-300');
-            }
-
-            // Check complexity requirement
-            if (/(?=.*[a-zA-Z])(?=.*[0-9])/.test(password)) {
-                newComplexCheck.classList.remove('bg-gray-300');
-                newComplexCheck.classList.add('bg-green-500');
-            } else {
-                newComplexCheck.classList.remove('bg-green-500');
-                newComplexCheck.classList.add('bg-gray-300');
-            }
-
-            checkPasswordMatch();
-        });
-
-        confirmPasswordInput.addEventListener('input', checkPasswordMatch);
-
-        function checkPasswordMatch() {
-            const newPassword = newPasswordInput.value;
-            const confirmPassword = confirmPasswordInput.value;
-
-            if (confirmPassword.length > 0) {
-                passwordMatchIndicator.classList.remove('hidden');
-
-                if (newPassword === confirmPassword) {
-                    passwordMatchText.textContent = '✓ Passwords match';
-                    passwordMatchText.className = 'text-green-600';
-                } else {
-                    passwordMatchText.textContent = '✗ Passwords do not match';
-                    passwordMatchText.className = 'text-red-600';
-                }
-            } else {
-                passwordMatchIndicator.classList.add('hidden');
-            }
-        }
-
-        // Handle change password form submission
-        document.getElementById('changePasswordForm').addEventListener('submit', function(e) {
-            e.preventDefault();
-
-            const currentPassword = document.getElementById('currentPasswordInput').value;
-            const newPassword = document.getElementById('newPassword').value;
-            const confirmPassword = document.getElementById('confirmPassword').value;
-
-            if (!currentPassword) {
-                showAlert('Error', 'Please enter your current password');
-                return;
-            }
-
-            if (!newPassword) {
-                showAlert('Error', 'Please enter a new password');
-                return;
-            }
-
-            if (newPassword.length < 6) {
-                showAlert('Error', 'New password must be at least 6 characters long');
-                return;
-            }
-
-            if (!/(?=.*[a-zA-Z])(?=.*[0-9])/.test(newPassword)) {
-                showAlert('Error', 'New password must contain both letters and numbers');
-                return;
-            }
-
-            if (newPassword !== confirmPassword) {
-                showAlert('Error', 'New passwords do not match');
-                return;
-            }
-
-            if (currentPassword === newPassword) {
-                showAlert('Error', 'New password must be different from current password');
-                return;
-            }
-
-            // Submit the form
-            const formData = new FormData(this);
-
-            fetch("{{ route('portal.change-password') }}", {
-                method: 'POST',
-                headers: {
-                    'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').getAttribute('content'),
-                },
-                body: formData
-            })
-            .then(response => response.json())
-            .then(data => {
-                if (data.success) {
-                    showAlert('Success', 'WiFi password updated successfully!');
-
-                    // Clear form
-                    document.getElementById('changePasswordForm').reset();
-
-                    // Update the displayed password
-                    document.getElementById('currentPassword').textContent = '•'.repeat(newPassword.length);
-
-                    // Reset indicators
-                    passwordMatchIndicator.classList.add('hidden');
-                    newLengthCheck.classList.remove('bg-green-500');
-                    newLengthCheck.classList.add('bg-gray-300');
-                    newComplexCheck.classList.remove('bg-green-500');
-                    newComplexCheck.classList.add('bg-gray-300');
-
-                    // Reload page after 2 seconds to refresh the current password display
-                    setTimeout(() => {
-                        window.location.reload();
-                    }, 2000);
-                } else {
-                    showAlert('Error', data.message || 'Failed to update password');
-                }
-            })
-            .catch(error => {
-                console.error('Error:', error);
-                showAlert('Error', 'An error occurred. Please try again.');
-            });
-        });
-    });
 
     // Auto-refresh subscription status every 30 seconds
     setInterval(() => {

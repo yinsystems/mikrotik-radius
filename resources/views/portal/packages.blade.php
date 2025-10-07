@@ -7,11 +7,19 @@
     <!-- Header -->
     <!-- Navigation -->
     <div class="flex justify-between items-center pt-4">
-        <a href="{{ route('portal.dashboard') }}"
-           class="text-gray-600 hover:text-gray-700 flex items-center space-x-2">
-            <i class="fas fa-arrow-left"></i>
-            <span>Back</span>
-        </a>
+        @if(isset($purchaseCheck) && $purchaseCheck['authenticated'])
+            <a href="{{ route('portal.dashboard') }}"
+               class="text-gray-600 hover:text-gray-700 flex items-center space-x-2">
+                <i class="fas fa-arrow-left"></i>
+                <span>Back to Dashboard</span>
+            </a>
+        @else
+            <a href="{{ route('portal.index') }}"
+               class="text-gray-600 hover:text-gray-700 flex items-center space-x-2">
+                <i class="fas fa-arrow-left"></i>
+                <span>Back</span>
+            </a>
+        @endif
     </div>
     <div class="text-center">
         <div class="w-16 h-16 mx-auto mb-4 flex items-center justify-center">
@@ -44,6 +52,35 @@
             @endif
         </div>
     @endif
+    
+    <!-- Phone Number Input Section (for unauthenticated users) -->
+    @if(!isset($purchaseCheck) || !$purchaseCheck['authenticated'])
+        <div class="bg-blue-50 border border-blue-200 rounded-xl p-4">
+            <div class="flex items-start space-x-3">
+                <i class="fas fa-phone text-blue-600 mt-0.5"></i>
+                <div class="flex-1">
+                    <h3 class="text-lg font-semibold text-blue-900 mb-2">Phone Number Required for Purchase</h3>
+                    <p class="text-blue-800 text-sm mb-3">Enter your phone number to proceed with package selection. Your phone number must be registered to make a payment.</p>
+                    
+                    <div class="flex space-x-3">
+                        <input type="tel" 
+                               id="customerPhone" 
+                               placeholder="Enter your phone number (e.g., +233XXXXXXXXX)" 
+                               class="flex-1 px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-sm">
+                        <button type="button" 
+                                id="verifyPhoneBtn"
+                                onclick="verifyPhoneNumber()"
+                                class="bg-blue-600 text-white px-4 py-2 rounded-lg font-medium hover:bg-blue-700 transition-colors text-sm">
+                            Verify Phone
+                        </button>
+                    </div>
+                    
+                    <div id="phoneStatus" class="mt-2 text-sm"></div>
+                </div>
+            </div>
+        </div>
+    @endif
+    
     <!-- Active Subscription Warning -->
     @if(isset($purchaseCheck) && $purchaseCheck['has_active'])
         <div class="bg-yellow-50 border border-yellow-200 rounded-xl p-4">
@@ -294,7 +331,6 @@
     </form>
 
 </div>
-@endsection
 
 @push('scripts')
 <script>
@@ -457,4 +493,193 @@
             showAlert('Error', 'An unexpected error occurred. Please try again.', 'error');
         });
     }
+
+    // Override the existing selectPackage function to include phone verification
+    function selectPackageOriginal(packageId, packageName, packagePrice) {
+        @if(!isset($purchaseCheck) || !$purchaseCheck['authenticated'])
+            // For unauthenticated users, check phone verification first
+            if (phoneVerificationStatus !== 'verified' || !verifiedPhone) {
+                showAlert('Phone Verification Required', 'Please verify your phone number first before selecting a package.', 'warning');
+                return;
+            }
+        @endif
+
+        @if(isset($purchaseCheck) && $purchaseCheck['has_active'])
+            showUpgradeModal(packageId, packageName, packagePrice);
+        @else
+            proceedWithPackageSelection(packageId, packageName, packagePrice);
+        @endif
+    }
+
+    // Update proceedWithPackageSelection to include phone for unauthenticated users
+    function proceedWithPackageSelection(packageId) {
+        showLoading();
+
+        const requestData = {
+            package_id: packageId
+        };
+
+        var isAuthenticated = {{ isset($purchaseCheck) && $purchaseCheck['authenticated'] ? 'true' : 'false' }};
+        if (!isAuthenticated && verifiedPhone) {
+            // Include phone number for unauthenticated users
+            requestData.phone = verifiedPhone;
+        }
+
+        fetch("{{ route('portal.select.package') }}", {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').getAttribute('content'),
+            },
+            body: JSON.stringify(requestData)
+        })
+        .then(response => response.json())
+        .then(data => {
+            hideLoading();
+
+            if (data.success) {
+                if (data.redirect) {
+                    window.location.href = data.redirect;
+                } else {
+                    showAlert('Success', data.message, 'success');
+                }
+            } else {
+                if (data.show_registration_popup) {
+                    showRegistrationModal();
+                } else if (data.errors) {
+                    const errorMessages = Object.values(data.errors).flat().join('\n');
+                    showAlert('Validation Error', errorMessages, 'error');
+                } else {
+                    showAlert('Error', data.message, 'error');
+                }
+            }
+        })
+        .catch(error => {
+            hideLoading();
+            console.error('Error:', error);
+            showAlert('Error', 'An unexpected error occurred. Please try again.', 'error');
+        });
+    }
+
+    let verifiedPhone = null;
+    let phoneVerificationStatus = 'pending'; // 'pending', 'verified', 'not_registered'
+
+    // Verify phone number function
+    function verifyPhoneNumber() {
+        const phoneInput = document.getElementById('customerPhone');
+        const phone = phoneInput.value.trim();
+        const statusDiv = document.getElementById('phoneStatus');
+        const verifyBtn = document.getElementById('verifyPhoneBtn');
+
+        if (!phone) {
+            statusDiv.innerHTML = '<span class="text-red-600"><i class="fas fa-exclamation-circle"></i> Please enter your phone number</span>';
+            return;
+        }
+
+        verifyBtn.disabled = true;
+        verifyBtn.innerHTML = 'Verifying...';
+        statusDiv.innerHTML = '<span class="text-blue-600"><i class="fas fa-spinner fa-spin"></i> Checking phone number...</span>';
+
+        fetch("{{ route('portal.check.phone') }}", {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').getAttribute('content'),
+            },
+            body: JSON.stringify({ phone: phone })
+        })
+        .then(response => response.json())
+        .then(data => {
+            verifyBtn.disabled = false;
+            verifyBtn.innerHTML = 'Verify Phone';
+
+            if (data.success) {
+                if (data.registered) {
+                    verifiedPhone = phone;
+                    phoneVerificationStatus = 'verified';
+                    statusDiv.innerHTML = '<span class="text-green-600"><i class="fas fa-check-circle"></i> Phone number verified! You can now select a package.</span>';
+                    phoneInput.disabled = true;
+                    verifyBtn.style.display = 'none';
+                } else {
+                    phoneVerificationStatus = 'not_registered';
+                    statusDiv.innerHTML = '<span class="text-red-600"><i class="fas fa-times-circle"></i> Phone number not registered. Please register first.</span>';
+                    setTimeout(() => {
+                        showRegistrationModal();
+                    }, 1000);
+                }
+            } else {
+                statusDiv.innerHTML = '<span class="text-red-600"><i class="fas fa-exclamation-circle"></i> ' + data.message + '</span>';
+            }
+        })
+        .catch(error => {
+            verifyBtn.disabled = false;
+            verifyBtn.innerHTML = 'Verify Phone';
+            console.error('Error:', error);
+            statusDiv.innerHTML = '<span class="text-red-600"><i class="fas fa-exclamation-circle"></i> An error occurred. Please try again.</span>';
+        });
+    }
+
+    // Registration modal functions
+    function showRegistrationModal() {
+        document.getElementById('registrationModal').classList.remove('hidden');
+    }
+
+    function closeRegistrationModal() {
+        document.getElementById('registrationModal').classList.add('hidden');
+    }
+
+    function redirectToRegistration() {
+        window.location.href = "{{ route('portal.register') }}";
+    }
+
+    // Override selectPackage after page load
+    document.addEventListener('DOMContentLoaded', function() {
+        // Store the original function
+        window.originalSelectPackage = window.selectPackage;
+        
+        // Replace with our new function
+        window.selectPackage = function(packageId, packageName, packagePrice) {
+            @if(!isset($purchaseCheck) || !$purchaseCheck['authenticated'])
+                // For unauthenticated users, check phone verification first
+                if (phoneVerificationStatus !== 'verified' || !verifiedPhone) {
+                    showAlert('Phone Verification Required', 'Please verify your phone number first before selecting a package.', 'warning');
+                    return;
+                }
+            @endif
+
+            // Call the original function logic
+            var hasActiveSubscription = {{ isset($purchaseCheck) && $purchaseCheck['has_active'] ? 'true' : 'false' }};
+            if (hasActiveSubscription) {
+                showUpgradeModal(packageId, packageName, packagePrice);
+            } else {
+                proceedWithPackageSelection(packageId, packageName, packagePrice);
+            }
+        };
+    });
 </script>
+@endpush
+@endsection
+
+<!-- Registration Required Modal -->
+<div id="registrationModal" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 hidden">
+    <div class="bg-white rounded-xl p-6 max-w-md w-full mx-4">
+        <div class="text-center">
+            <div class="w-16 h-16 mx-auto mb-4 bg-red-100 rounded-full flex items-center justify-center">
+                <i class="fas fa-user-plus text-2xl text-red-600"></i>
+            </div>
+            <h3 class="text-xl font-bold text-gray-900 mb-2">Registration Required</h3>
+            <p class="text-gray-600 mb-6">Your phone number is not registered. You need to register first before you can purchase a package.</p>
+            
+            <div class="space-y-3">
+                <button onclick="redirectToRegistration()" 
+                        class="w-full bg-blue-600 text-white py-2 px-4 rounded-lg font-medium hover:bg-blue-700 transition-colors">
+                    Register Now
+                </button>
+                <button onclick="closeRegistrationModal()" 
+                        class="w-full bg-gray-200 text-gray-700 py-2 px-4 rounded-lg font-medium hover:bg-gray-300 transition-colors">
+                    Cancel
+                </button>
+            </div>
+        </div>
+    </div>
+</div>

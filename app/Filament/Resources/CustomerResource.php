@@ -111,7 +111,7 @@ class CustomerResource extends Resource
                                     ->maxLength(255)
                                     ->prefixIcon('heroicon-o-lock-closed')
                                     ->placeholder('Generate secure password')
-                                    ->helperText('Strong password recommended for security')
+                                    ->helperText('Portal password for account login (separate from WiFi token)')
                                     ->suffixAction(
                                         Forms\Components\Actions\Action::make('generate')
                                             ->icon('heroicon-o-arrow-path')
@@ -183,6 +183,18 @@ class CustomerResource extends Resource
                     ->copyMessage('Username copied')
                     ->copyMessageDuration(1500)
                     ->placeholder('Phone as username'),
+
+                Tables\Columns\TextColumn::make('internet_token')
+                    ->label('WiFi Token')
+                    ->badge()
+                    ->color(fn (?string $state): string => $state ? 'success' : 'gray')
+                    ->icon('heroicon-o-key')
+                    ->copyable()
+                    ->copyMessage('WiFi Token copied')
+                    ->copyMessageDuration(1500)
+                    ->formatStateUsing(fn (?string $state): string => $state ?? 'No token')
+                    ->placeholder('No token')
+                    ->toggleable(),
 
                 Tables\Columns\TextColumn::make('status')
                     ->badge()
@@ -615,6 +627,21 @@ class CustomerResource extends Resource
                                     ->label('Registered')
                                     ->dateTime()
                                     ->icon('heroicon-o-calendar'),
+
+                                Infolists\Components\TextEntry::make('internet_token')
+                                    ->label('WiFi Token')
+                                    ->icon('heroicon-o-key')
+                                    ->copyable()
+                                    ->badge()
+                                    ->color('success')
+                                    ->placeholder('No token generated')
+                                    ->formatStateUsing(fn (?string $state): string => $state ? "Token: {$state}" : 'No token'),
+
+                                Infolists\Components\TextEntry::make('token_generated_at')
+                                    ->label('Token Generated')
+                                    ->dateTime()
+                                    ->icon('heroicon-o-clock')
+                                    ->placeholder('Never generated'),
                             ]),
                     ]),
 
