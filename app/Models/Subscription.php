@@ -322,23 +322,12 @@ class Subscription extends Model
         switch ($this->status) {
             case 'active':
                 if (!$this->isExpired()) {
-                    // Set subscribed mode for active users
-                    RadCheck::setSubscribedMode($this->username, $this->getSessionTimeoutSeconds());
-                    
-                    // Apply package-specific bandwidth limits if defined
-                    if ($this->package && ($this->package->upload_speed || $this->package->download_speed)) {
-                        RadReply::setBandwidthLimit(
-                            $this->username, 
-                            $this->package->upload_speed ?? 1024, 
-                            $this->package->download_speed ?? 1024
-                        );
-                    }
+                    RadCheck::unblockUser($this->username);
                 } else {
-                    // Put expired users in data exhausted mode
-                    RadCheck::setDataExhaustedMode($this->username);
+                    // Redirect user to payment portal instead of blocking
+                    RadCheck::redirectUserForExpiration($this->username);
                     
-                    // Force disconnect active sessions
-                    RadCheck::forceDisconnectUser($this->username);
+                    // Immediately disconnect active sessions via MikroTik API
                     $this->disconnectActiveSessions();
                 }
                 break;
@@ -348,29 +337,18 @@ class Subscription extends Model
                 RadCheck::blockUserForSuspension($this->username);
                 
                 // Disconnect active sessions for suspended/blocked users
-                RadCheck::forceDisconnectUser($this->username);
                 $this->disconnectActiveSessions();
                 break;
                 
             case 'expired':
-                // Put expired users in data exhausted mode
-                RadCheck::setDataExhaustedMode($this->username);
+                RadCheck::redirectUserForExpiration($this->username);
                 
-                // Force disconnect active sessions
-                RadCheck::forceDisconnectUser($this->username);
+                // Disconnect active sessions for expired users
                 $this->disconnectActiveSessions();
                 break;
                 
             case 'pending':
-                // Auto-activate trial subscriptions, block regular subscriptions
-                if ($this->is_trial) {
-                    // Trial subscriptions should be automatically activated
-                    $this->update(['status' => 'active']);
-                    $this->syncRadiusStatus(); // Re-sync with active status
-                } else {
-                    // Regular subscriptions need approval
-                    RadCheck::blockUser($this->username, 'Your account is pending activation. Please wait for approval.');
-                }
+                RadCheck::blockUser($this->username, 'Your account is pending activation. Please wait for approval.');
                 break;
         }
         
@@ -393,9 +371,6 @@ class Subscription extends Model
     // Status management with RADIUS integration
     public function activate()
     {
-        // Remove user from data-exhausted list when activating
-        RadReply::removeFromAddressList($this->username, 'data-exhausted-users');
-        
         $this->update(['status' => 'active']);
         $this->syncRadiusStatus();
         
