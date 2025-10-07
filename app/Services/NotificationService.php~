@@ -40,7 +40,7 @@ class NotificationService
 
             // Determine which channels to use
             $channels = $this->determineChannels($type, $customChannels);
-
+            
             if (empty($channels)) {
                 return $this->buildErrorResponse('No notification channels enabled');
             }
@@ -53,7 +53,7 @@ class NotificationService
 
             // Prepare message content
             $messages = $this->prepareMessages($type, $data);
-
+            
             // Send via each channel
             $results = [];
             $anySuccess = false;
@@ -61,7 +61,7 @@ class NotificationService
             foreach ($channels as $channel) {
                 $result = $this->sendViaChannel($channel, $recipient, $messages, $type);
                 $results[$channel] = $result;
-
+                
                 if ($result['success']) {
                     $anySuccess = true;
                     // If one channel succeeds, we can consider it successful
@@ -144,7 +144,6 @@ class NotificationService
             'phone' => $customer['phone'] ?? null,
         ], [
             'customer_name' => $customer['name'],
-            'token' => $customer['internet_token'],
             'username' => $credentials['username'],
             'password' => $credentials['password'],
         ]);
@@ -192,10 +191,10 @@ class NotificationService
         $hoursRemaining = $subscription['hours_remaining'] ?? 24;
         $minutesRemaining = $subscription['minutes_remaining'] ?? ($hoursRemaining * 60);
         $durationType = $subscription['duration_type'] ?? 'hourly';
-
+        
         // Determine the appropriate time display based on duration type and remaining time
         $timeDisplay = $this->formatTimeRemaining($durationType, $hoursRemaining, $minutesRemaining);
-
+        
         return $this->send('expiration_warning', [
             'name' => $customer['name'],
             'email' => $customer['email'] ?? null,
@@ -226,7 +225,7 @@ class NotificationService
                 return $minutesRemaining . ' minutes';
             }
         }
-
+        
         // For longer durations, show hours
         if ($hoursRemaining <= 0) {
             return 'less than 1 hour';
@@ -254,7 +253,7 @@ class NotificationService
 
             // Prepare recipient array for the protected method
             $recipient = ['phone' => $phone];
-
+            
             // Send SMS using the existing protected method
             return $this->sendSms($recipient, $message);
 
@@ -281,14 +280,14 @@ class NotificationService
 
         // Check type-specific settings
         $typeConfig = $this->config['types'][$type] ?? [];
-
+        
         $channels = [];
-
+        
         // Check if SMS is enabled for this type
         if (($typeConfig['sms_enabled'] ?? true) && $this->smsEnabled) {
             $channels[] = 'sms';
         }
-
+        
         // Check if email is enabled for this type
         if (($typeConfig['email_enabled'] ?? true) && $this->emailEnabled) {
             $channels[] = 'email';
@@ -344,7 +343,7 @@ class NotificationService
     protected function prepareMessages(string $type, array $data): array
     {
         $templates = $this->config['templates'][$type] ?? [];
-
+        
         $messages = [];
 
         // Prepare SMS message
@@ -399,7 +398,7 @@ class NotificationService
                 // Log retry attempt
                 if ($attempt < $maxAttempts) {
                     $this->logRetry($type, $channel, $recipient, $attempt, $result['message'] ?? 'Unknown error');
-
+                    
                     // Wait before retry
                     $retryDelay = $exponentialBackoff ? $delay * pow(2, $attempt - 1) : $delay;
                     sleep($retryDelay);
@@ -408,7 +407,7 @@ class NotificationService
             } catch (\Exception $e) {
                 if ($attempt < $maxAttempts) {
                     $this->logRetry($type, $channel, $recipient, $attempt, $e->getMessage());
-
+                    
                     $retryDelay = $exponentialBackoff ? $delay * pow(2, $attempt - 1) : $delay;
                     sleep($retryDelay);
                 } else {
@@ -460,7 +459,7 @@ class NotificationService
             });
 
             return ['success' => true, 'message' => 'Email sent successfully'];
-
+            
         } catch (\Exception $e) {
             return ['success' => false, 'message' => 'Email failed: ' . $e->getMessage()];
         }

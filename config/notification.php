@@ -122,7 +122,7 @@ return [
     */
     'templates' => [
         'welcome' => [
-            'sms' => "Welcome to JayNet WI-FI! Portal Login:\n{username}\nPassword: {password}\nVisit: http://jaynet.local.com",
+            'sms' => "Welcome to JayNet WI-FI! Portal Login:\n{username} \nPassword: {password}",
             'email_subject' => 'Welcome to JayNet WI-FI - Account Created',
             'email_body' => 'Welcome to JayNet WI-FI! Your portal account has been created successfully. Portal Login - Username: {username}, Password: {password}. After purchasing a subscription, you will receive a separate 6-digit WiFi token for internet access.',
         ],

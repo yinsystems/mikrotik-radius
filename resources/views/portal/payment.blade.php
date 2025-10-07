@@ -411,19 +411,33 @@
                                         </div>
                                         <div class="flex justify-between items-center">
                                             <span class="text-blue-700">WiFi Token:</span>
-                                            <span class="font-mono font-medium text-lg font-bold text-green-600">${credentials.token || 'Generating...'}</span>
+                                            <div class="flex items-center space-x-2">
+                                                <span id="wifiToken" class="font-mono font-medium text-lg font-bold text-green-600">${credentials.token || 'Generating...'}</span>
+                                                <button onclick="copyWifiToken('${credentials.token}')" 
+                                                        class="p-1 text-blue-600 hover:text-blue-700 transition-colors" 
+                                                        title="Copy WiFi Token">
+                                                    <i class="fas fa-copy"></i>
+                                                </button>
+                                            </div>
                                         </div>
                                     </div>
+                                    <p class="text-xs text-blue-600 mt-2">Please copy WiFi Token.</p>
                                     <p class="text-xs text-blue-600 mt-2">Use these details to connect to WiFi. Note: You also have a separate portal password for account access.</p>
                                 </div>` : '';
 
                             showPaymentStatus('success', 'Payment Successful!',
                                 'Your payment has been processed successfully. Your internet access is now active!',
                                 `${credentialsHtml}
-                                <button onclick="redirectToRouter()"
-                                        class="w-full bg-green-600 hover:bg-green-700 text-white py-3 px-4 rounded-lg font-medium transition-colors">
-                                    <i class="fas fa-wifi mr-2"></i>Connect to Internet
-                                </button>`);
+                                <div class="space-y-3">
+                                    <button onclick="redirectToRouter()"
+                                            class="w-full bg-green-600 hover:bg-green-700 text-white py-3 px-4 rounded-lg font-medium transition-colors">
+                                        <i class="fas fa-wifi mr-2"></i>Connect to Internet
+                                    </button>
+                                    <button onclick="dismissPaymentAndGoToPackages()"
+                                            class="w-full bg-gray-600 hover:bg-gray-700 text-white py-2 px-4 rounded-lg font-medium transition-colors flex items-center justify-center">
+                                        <i class="fas fa-arrow-left mr-2"></i>Return to Packages
+                                    </button>
+                                </div>`);
                         } else {
                             showPaymentStatus('success', 'Payment Successful!',
                                 'Your payment has been processed successfully. Your internet access is being activated...');
@@ -567,6 +581,16 @@
         }
     }
 
+    function dismissPaymentAndGoToPackages() {
+        // Clear any pending payment checks
+        if (paymentCheckInterval) {
+            clearInterval(paymentCheckInterval);
+        }
+        // Close modal and redirect
+        closePaymentModal();
+        window.location.href = "{{ route('portal.packages') }}";
+    }
+
     function cancelPayment() {
         if (paymentCheckInterval) {
             clearInterval(paymentCheckInterval);
@@ -646,6 +670,29 @@
             document.execCommand('copy');
             document.body.removeChild(textArea);
             showAlert('Success', 'Login URL copied to clipboard!');
+        }
+    }
+
+    function copyWifiToken(token) {
+        if (!token || token === 'Generating...') {
+            showAlert('Notice', 'Please wait for the WiFi token to be generated.');
+            return;
+        }
+
+        if (navigator.clipboard && window.isSecureContext) {
+            navigator.clipboard.writeText(token).then(() => {
+                showAlert('Success', 'WiFi token copied to clipboard!');
+            });
+        } else {
+            // Fallback for older browsers
+            const textArea = document.createElement('textarea');
+            textArea.value = token;
+            document.body.appendChild(textArea);
+            textArea.select();
+            textArea.setSelectionRange(0, 99999);
+            document.execCommand('copy');
+            document.body.removeChild(textArea);
+            showAlert('Success', 'WiFi token copied to clipboard!');
         }
     }
 

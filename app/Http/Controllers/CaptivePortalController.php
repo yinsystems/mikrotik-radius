@@ -112,7 +112,7 @@ class CaptivePortalController extends Controller
             $y = Session::get('registration_name');
             $z = Session::get('registration_password');
 
-            Log::info("OTP enabled - storing registration data: ".$x." ".$y." ".$z);
+            Log::info("OTP enabled - storing registration data: " . $x . " " . $y . " " . $z);
 
             // Generate and send OTP
             $otpResult = $this->otpService->generateAndSend($phone, 'registration');
@@ -256,10 +256,12 @@ class CaptivePortalController extends Controller
         $packageHistory = collect();
 
         if ($phone) {
-            $customer = Customer::where('phone', $phone)->first();
+            $customer = Customer::where('phone', $phone)
+                ->with(['activeSubscription.package'])
+                ->first();
             if ($customer) {
                 $purchaseCheck['authenticated'] = true;
-                
+
                 // Check purchase eligibility and get active subscription details
                 $activeSubscription = $customer->getActiveSubscription();
                 $hasActive = $activeSubscription !== null;
@@ -301,14 +303,14 @@ class CaptivePortalController extends Controller
             return redirect()->route('portal.index');
         }
 
-        $customer = Customer::where('phone', $phone)->first();
+    $customer = Customer::where('phone', $phone)->with('activeSubscription')->first();
         if (!$customer) {
             return redirect()->route('portal.index');
         }
 
         $activeSubscription = $customer->getActiveSubscription();
         $settings = SettingsHelper::general();
-        
+
         // Get internet token for WiFi access
         $internetToken = $customer->getInternetToken();
 
@@ -326,9 +328,16 @@ class CaptivePortalController extends Controller
      */
     public function selectPackage(Request $request)
     {
-        $validator = Validator::make($request->all(), [
+        // If authenticated, use session phone; else require phone in request
+        $sessionPhone = Session::get('customer_phone');
+        $phone = $request->phone ?? $sessionPhone;
+
+        $validator = Validator::make([
+            'package_id' => $request->package_id,
+            'phone' => $phone
+        ], [
             'package_id' => 'required|exists:packages,id',
-            'phone' => 'required|string|regex:/^\+?[0-9]{10,15}$/',
+            'phone' => $sessionPhone ? 'string|regex:/^\+?[0-9]{10,15}$/' : 'required|string|regex:/^\+?[0-9]{10,15}$/'
         ]);
 
         if ($validator->fails()) {
@@ -339,8 +348,8 @@ class CaptivePortalController extends Controller
         }
 
         // Check if phone number is registered
-        $customer = Customer::where('phone', $request->phone)->first();
-        
+        $customer = Customer::where('phone', $phone)->first();
+
         if (!$customer) {
             return response()->json([
                 'success' => false,
@@ -353,7 +362,7 @@ class CaptivePortalController extends Controller
 
         // Store package and customer info in session for payment
         Session::put('selected_package_id', $package->id);
-        Session::put('payment_customer_phone', $request->phone);
+        Session::put('payment_customer_phone', $phone);
         Session::put('payment_customer_id', $customer->id);
 
         return response()->json([
@@ -384,7 +393,7 @@ class CaptivePortalController extends Controller
 
         $customer = Customer::find($customerId);
         $package = Package::findOrFail($packageId);
-        
+
         if (!$customer || $customer->phone !== $customerPhone) {
             return redirect()->route('portal.packages')->with('error', 'Invalid customer information.');
         }
@@ -990,16 +999,6 @@ class CaptivePortalController extends Controller
         }
     }
 
-    /**
-     * Show data exhausted page for users who need to renew
-     */
-    public function showDataExhausted()
-    {
-        $settings = SettingsHelper::general();
-        $packages = Package::where('status', 'active')->get();
-        
-        return view('portal.data-exhausted', compact('settings', 'packages'));
-    }
 
     /**
      * Check if phone number is registered (public endpoint)
@@ -1026,6 +1025,4 @@ class CaptivePortalController extends Controller
             'phone' => $request->phone
         ]);
     }
-
-
 }

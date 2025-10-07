@@ -1,7 +1,7 @@
 @php use App\Settings\GeneralSettings; @endphp
 @extends('layouts.portal')
 
-@section('title', 'Login - Campus WiFi')
+@section('title', 'Login - JayNet WiFi')
 
 @push('styles')
     <!-- Video.js CSS -->

@@ -130,7 +130,7 @@ $settings= new \App\Settings\GeneralSettings();
             <div class="text-center mb-4">
                 <h3 class="text-lg font-semibold text-gray-900">
                     <i class="fas fa-play-circle text-blue-600 mr-2"></i>
-                   Learn something new!
+                   Learn How To Use.
                 </h3>
                 <p class="text-gray-600 text-sm mt-1">Learn about our high-speed WiFi services</p>
             </div>
@@ -162,7 +162,7 @@ $settings= new \App\Settings\GeneralSettings();
                 <img src="{{ asset('logo/wifi-campus.png') }}" alt="WiFi Campus Logo" class="max-w-full max-h-full object-contain">
             </div>
             <h2 class="text-2xl font-bold text-gray-900 mb-2">Welcome to WiFi</h2>
-            <p class="text-gray-600">Enjoy unlimited true Unlimited Data</p>
+            <p class="text-gray-600">Enjoy True Unlimited Internet Access</p>
         </div>
 
         @if(isset($settings) && @$settings?->announcement_text)
@@ -236,7 +236,7 @@ $settings= new \App\Settings\GeneralSettings();
             <a href="{{ route('portal.login') }}"
                class="w-full bg-gray-600 text-white py-3 px-4 rounded-lg font-medium hover:bg-gray-700 transition-colors flex items-center justify-center space-x-2 border-2 border-transparent hover:border-gray-500">
                 <i class="fas fa-sign-in-alt"></i>
-                <span>Existing User - Login</span>
+                <span>Portal - Login</span>
             </a>
         </div>
     </div>
@@ -253,36 +253,6 @@ $settings= new \App\Settings\GeneralSettings();
             </div>
         </div>
     @endif
-
-    <!-- Available Packages Preview -->
-    @if(isset($packages) && $packages->count() > 0)
-        <div class="bg-white rounded-xl card-shadow p-6">
-            <h3 class="text-lg font-semibold text-gray-900 mb-4 flex items-center">
-                <i class="fas fa-box text-green-600 mr-2"></i>
-                Available Packages
-            </h3>
-            <div class="grid gap-3">
-                @foreach($packages->take(3) as $package)
-                    <div class="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
-                        <div>
-                            <h4 class="font-medium text-gray-900">{{ $package->name }}</h4>
-                            <p class="text-sm text-gray-600">{{ $package->data_limit_display }} - {{ $package->duration_display }}</p>
-                        </div>
-                        <div class="text-right">
-                            <p class="font-bold text-green-600">GH₵{{ number_format($package->price, 2) }}</p>
-                        </div>
-                    </div>
-                @endforeach
-
-                @if($packages->count() > 3)
-                    <p class="text-center text-sm text-gray-500 mt-2">
-                        And {{ $packages->count() - 3 }} more packages available
-                    </p>
-                @endif
-            </div>
-        </div>
-    @endif
-
     <!-- Advertisement Card -->
     @if(isset($settings) && @$settings?->advertisement_text)
         <div class="bg-gradient-to-r from-purple-400 to-pink-400 rounded-xl p-6 text-white text-center">

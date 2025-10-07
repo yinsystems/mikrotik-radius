@@ -130,7 +130,7 @@ $settings= new \App\Settings\GeneralSettings();
             <div class="text-center mb-4">
                 <h3 class="text-lg font-semibold text-gray-900">
                     <i class="fas fa-play-circle text-blue-600 mr-2"></i>
-                   Learn how to use
+                   Learn How To Use.
                 </h3>
                 <p class="text-gray-600 text-sm mt-1">Learn about our high-speed WiFi services</p>
             </div>
@@ -162,7 +162,7 @@ $settings= new \App\Settings\GeneralSettings();
                 <img src="{{ asset('logo/wifi-campus.png') }}" alt="WiFi Campus Logo" class="max-w-full max-h-full object-contain">
             </div>
             <h2 class="text-2xl font-bold text-gray-900 mb-2">Welcome to WiFi</h2>
-            <p class="text-gray-600">Enjoy unlimited true Unlimited Data</p>
+            <p class="text-gray-600">Enjoy True Unlimited Internet Access</p>
         </div>
 
         @if(isset($settings) && @$settings?->announcement_text)
@@ -181,6 +181,13 @@ $settings= new \App\Settings\GeneralSettings();
         @endif
 
         <div class="space-y-4">
+            <!-- Browse Packages Button (no authentication required) -->
+            <a href="{{ route('portal.packages') }}"
+               class="w-full bg-green-600 text-white py-3 px-4 rounded-lg font-medium hover:bg-green-700 transition-colors flex items-center justify-center space-x-2 border-2 border-transparent hover:border-green-500">
+                <i class="fas fa-eye"></i>
+                <span>Browse All Packages</span>
+            </a>
+
             <!-- New User Button with Free Trial Promotion -->
             <div class="relative">
                 <!-- Free Trial Badge -->
@@ -229,7 +236,7 @@ $settings= new \App\Settings\GeneralSettings();
             <a href="{{ route('portal.login') }}"
                class="w-full bg-gray-600 text-white py-3 px-4 rounded-lg font-medium hover:bg-gray-700 transition-colors flex items-center justify-center space-x-2 border-2 border-transparent hover:border-gray-500">
                 <i class="fas fa-sign-in-alt"></i>
-                <span>Existing User - Login</span>
+                <span>Portal - Login</span>
             </a>
         </div>
     </div>
@@ -243,35 +250,6 @@ $settings= new \App\Settings\GeneralSettings();
             </h3>
             <div class="text-gray-600 text-sm leading-relaxed">
                 {!! nl2br(e($settings->user_instructions)) !!}
-            </div>
-        </div>
-    @endif
-
-    <!-- Available Packages Preview -->
-    @if(isset($packages) && $packages->count() > 0)
-        <div class="bg-white rounded-xl card-shadow p-6">
-            <h3 class="text-lg font-semibold text-gray-900 mb-4 flex items-center">
-                <i class="fas fa-box text-green-600 mr-2"></i>
-                Available Packages
-            </h3>
-            <div class="grid gap-3">
-                @foreach($packages->take(3) as $package)
-                    <div class="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
-                        <div>
-                            <h4 class="font-medium text-gray-900">{{ $package->name }}</h4>
-                            <p class="text-sm text-gray-600">{{ $package->data_limit }}GB - {{ $package->validity_days }} days</p>
-                        </div>
-                        <div class="text-right">
-                            <p class="font-bold text-green-600">GH₵{{ number_format($package->price, 2) }}</p>
-                        </div>
-                    </div>
-                @endforeach
-
-                @if($packages->count() > 3)
-                    <p class="text-center text-sm text-gray-500 mt-2">
-                        And {{ $packages->count() - 3 }} more packages available
-                    </p>
-                @endif
             </div>
         </div>
     @endif
