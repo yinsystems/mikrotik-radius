@@ -57,24 +57,28 @@
         <!-- Phone Number Input Section (for unauthenticated users) -->
         @if(!isset($purchaseCheck) || !$purchaseCheck['authenticated'])
             <div class="bg-blue-50 border border-blue-200 rounded-xl p-4">
-                <div class="flex items-start space-x-3">
-                    <i class="fas fa-phone text-blue-600 mt-0.5"></i>
+                <div class="flex flex-col sm:flex-row sm:items-start sm:space-x-3">
+                    <i class="fas fa-phone text-blue-600 mt-0.5 block"></i>
                     <div class="flex-1">
-                        <h3 class="text-lg font-semibold text-blue-900 mb-2">Phone Number Required for Purchase</h3>
+                        <h3 class="text-lg font-semibold text-blue-900 mb-2">
+                            Phone Number Required for Purchase
+                        </h3>
                         <p class="text-blue-800 text-sm mb-3">Enter your phone number to proceed with package selection.
                             Your phone number must be registered to make a payment.</p>
 
                         <div class="flex space-x-3">
-                            <input type="tel"
-                                   id="customerPhone"
-                                   placeholder="Enter your phone number (e.g., +233XXXXXXXXX)"
-                                   class="flex-1 px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-sm">
-                            <button type="button"
-                                    id="verifyPhoneBtn"
-                                    onclick="verifyPhoneNumber()"
-                                    class="bg-blue-600 text-white px-4 py-2 rounded-lg font-medium hover:bg-blue-700 transition-colors text-sm">
-                                Verify Phone
-                            </button>
+                            <div class="flex flex-col sm:flex-row space-y-2 sm:space-y-0 sm:space-x-3 w-full">
+                                <input type="tel"
+                                       id="customerPhone"
+                                       placeholder="Enter phone number"
+                                       class="w-full sm:flex-1 px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-sm">
+                                <button type="button"
+                                        id="verifyPhoneBtn"
+                                        onclick="verifyPhoneNumber()"
+                                        class="w-full sm:w-auto bg-blue-600 text-white px-4 py-2 rounded-lg font-medium hover:bg-blue-700 transition-colors text-sm whitespace-nowrap">
+                                    Verify Phone
+                                </button>
+                            </div>
                         </div>
 
                         <div id="phoneStatus" class="mt-2 text-sm"></div>
@@ -120,14 +124,14 @@
                     class="bg-white rounded-xl card-shadow overflow-hidden border border-gray-200 hover:border-blue-300 transition-colors">
                     <div class="p-6">
                         <!-- Package Header -->
-                        <div class="flex items-center justify-between mb-4">
-                            <div>
-                                <h3 class="text-xl font-bold text-gray-900">{{ $package->name }}</h3>
+                        <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between mb-4 space-y-2 sm:space-y-0">
+                            <div class="flex-1 min-w-0">
+                                <h3 class="text-xl font-bold text-gray-900 truncate">{{ $package->name }}</h3>
                                 @if($package->description)
-                                    <p class="text-gray-600 text-sm mt-1">{{ $package->description }}</p>
+                                    <p class="text-gray-600 text-sm mt-1 line-clamp-2">{{ $package->description }}</p>
                                 @endif
                             </div>
-                            <div class="text-right">
+                            <div class="text-left sm:text-right flex-shrink-0">
                                 <div class="text-2xl font-bold text-green-600">
                                     GH₵{{ number_format($package->price, 2) }}
                                 </div>
@@ -140,12 +144,12 @@
                         </div>
 
                         <!-- Package Features -->
-                        <div class="grid grid-cols-2 gap-4 mb-6">
+                        <div class="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-6">
                             <div class="flex items-center space-x-2">
-                                <i class="fas fa-download text-blue-600"></i>
-                                <span class="text-sm text-gray-700">
-                                <strong>{{ $package->data_limit_display }}</strong> Data
-                            </span>
+                                <i class="fas fa-download text-blue-600 w-5"></i>
+                                <span class="text-sm text-gray-700 truncate">
+                                    <strong>{{ $package->data_limit_display }}</strong> Data
+                                </span>
                             </div>
                             <div class="flex items-center space-x-2">
                                 <i class="fas fa-clock text-blue-600"></i>

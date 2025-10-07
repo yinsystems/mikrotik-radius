@@ -130,14 +130,14 @@ class Package extends Model
     public function setupRadiusGroup()
     {
         $groupname = $this->getGroupName();
-        
+
         // Clean up any existing entries first
         RadGroupCheck::cleanupGroup($groupname);
         RadGroupReply::cleanupGroup($groupname);
-        
+
         // Setup group restrictions (RadGroupCheck)
         $this->addGroupCheckAttributes($groupname);
-        
+
         // Setup group attributes (RadGroupReply)
         $this->addGroupReplyAttributes($groupname);
 
@@ -186,7 +186,7 @@ class Package extends Model
     {
         $uploadKbps = $this->bandwidth_upload ?: 2000;   // Default 2M upload
         $downloadKbps = $this->bandwidth_download ?: 5000; // Default 5M download
-        
+
         // Convert Kbps to bps for WISPr attributes
         $uploadBps = $uploadKbps * 1000;
         $downloadBps = $downloadKbps * 1000;
@@ -249,7 +249,7 @@ class Package extends Model
             'groupname' => $groupname,
             'attribute' => 'Reply-Message',
             'op' => ':=',
-            'value' => "Welcome to {$this->name} package, %{User-Name}!"
+            'value' => "Welcome to {$this->name} package, Your purchase has expired!"
         ]);
     }
 
@@ -284,7 +284,7 @@ class Package extends Model
         }
 
         $value = $this->duration_value;
-        
+
         switch ($this->duration_type) {
             case 'minutely':
                 return $value * 60;
@@ -374,12 +374,12 @@ class Package extends Model
     {
         $packages = self::all();
         $setupCount = 0;
-        
+
         foreach ($packages as $package) {
             $package->setupRadiusGroup();
             $setupCount++;
         }
-        
+
         return $setupCount;
     }
 
