@@ -362,7 +362,15 @@ class Subscription extends Model
                 break;
                 
             case 'pending':
-                RadCheck::blockUser($this->username, 'Your account is pending activation. Please wait for approval.');
+                // Auto-activate trial subscriptions, block regular subscriptions
+                if ($this->is_trial) {
+                    // Trial subscriptions should be automatically activated
+                    $this->update(['status' => 'active']);
+                    $this->syncRadiusStatus(); // Re-sync with active status
+                } else {
+                    // Regular subscriptions need approval
+                    RadCheck::blockUser($this->username, 'Your account is pending activation. Please wait for approval.');
+                }
                 break;
         }
         
