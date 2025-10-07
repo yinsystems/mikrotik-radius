@@ -322,20 +322,10 @@ class Subscription extends Model
         switch ($this->status) {
             case 'active':
                 if (!$this->isExpired()) {
-                    // Set full internet access for active subscriptions
-                    RadCheck::setFullAccessMode($this->username, $this->getSessionTimeoutSeconds());
-                    
-                    // Apply package-specific bandwidth limits if defined
-                    if ($this->package && ($this->package->upload_speed || $this->package->download_speed)) {
-                        RadReply::setBandwidthLimit(
-                            $this->username, 
-                            $this->package->upload_speed ?? 1024, 
-                            $this->package->download_speed ?? 1024
-                        );
-                    }
+                    RadCheck::unblockUser($this->username);
                 } else {
-                    // For expired active subscriptions, place in portal-only mode (REJECT authentication)
-                    RadCheck::setPortalOnlyMode($this->username);
+                    // Redirect user to payment portal instead of blocking
+                    RadCheck::redirectUserForExpiration($this->username);
                     
                     // Immediately disconnect active sessions via MikroTik API
                     $this->disconnectActiveSessions();
@@ -351,8 +341,7 @@ class Subscription extends Model
                 break;
                 
             case 'expired':
-                // For expired subscriptions, place in portal-only mode (REJECT authentication)
-                RadCheck::setPortalOnlyMode($this->username);
+                RadCheck::redirectUserForExpiration($this->username);
                 
                 // Disconnect active sessions for expired users
                 $this->disconnectActiveSessions();
@@ -975,27 +964,6 @@ class Subscription extends Model
             // The RADIUS blocking will still prevent new sessions
             return 0;
         }
-    }
-    
-    /**
-     * Get session timeout in seconds based on package duration
-     */
-    private function getSessionTimeoutSeconds()
-    {
-        if (!$this->package) {
-            return null; // No timeout for unlimited sessions
-        }
-        
-        // Calculate total seconds based on package duration
-        return match($this->package->duration_type) {
-            'minutely' => $this->package->duration_value * 60,
-            'hourly' => $this->package->duration_value * 3600,
-            'daily' => $this->package->duration_value * 24 * 3600,
-            'weekly' => $this->package->duration_value * 7 * 24 * 3600,
-            'monthly' => $this->package->duration_value * 30 * 24 * 3600,
-            'trial' => $this->package->trial_duration_hours * 3600,
-            default => 24 * 3600 // Default to 1 day
-        };
     }
     
     private function calculateExpiration($package, $startFrom = null)

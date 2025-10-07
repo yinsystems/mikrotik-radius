@@ -4,22 +4,6 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
 
-/**
- * RadReply Model - RADIUS Reply Attributes
- * 
- * REQUIRED MIKROTIK CONFIGURATION:
- * To implement portal-only access, add these firewall rules to your MikroTik router:
- * 
- * /ip firewall filter
- * add action=accept chain=forward src-address-list=portal-only-users dst-address=158.220.97.239 comment="Allow portal access"
- * add action=accept chain=forward src-address-list=portal-only-users protocol=udp dst-port=53 comment="Allow DNS"
- * add action=drop chain=forward src-address-list=portal-only-users comment="Block other traffic for portal-only users"
- * add action=accept chain=forward src-address-list=subscribed-users comment="Allow full access for subscribers"
- * 
- * Address lists are managed automatically by RADIUS:
- * - portal-only-users: Unsubscribed users (limited to portal + DNS)
- * - subscribed-users: Active subscribers (full internet access)
- */
 class RadReply extends Model
 {
     protected $table = 'radreply';
@@ -115,87 +99,6 @@ class RadReply extends Model
             ['username' => $username, 'attribute' => 'Mikrotik-Address-List'],
             ['op' => ':=', 'value' => $listName]
         );
-    }
-
-    public static function setReplyMessage($username, $message)
-    {
-        return self::updateOrCreate(
-            ['username' => $username, 'attribute' => 'Reply-Message'],
-            ['op' => ':=', 'value' => $message]
-        );
-    }
-
-    public static function setRedirectionURL($username, $url)
-    {
-        return self::updateOrCreate(
-            ['username' => $username, 'attribute' => 'WISPr-Redirection-URL'],
-            ['op' => ':=', 'value' => $url]
-        );
-    }
-
-    /**
-     * Set portal-only access for unsubscribed users
-     */
-    public static function setPortalOnlyAccess($username, $portalIP = '158.220.97.239')
-    {
-        // Add user to portal-only address list
-        self::setMikrotikAddressList($username, 'portal-only-users');
-        
-        // Set filter for portal-only access
-        self::setFilterId($username, 'portal-only-filter');
-        
-        // Set reduced bandwidth for portal access
-        self::setBandwidthLimit($username, 512, 512); // 512 Kbps up/down
-        
-        // Set informative message
-        self::setReplyMessage($username, 'Limited access: Portal only. Subscribe to a package for full internet access.');
-        
-        return true;
-    }
-
-    /**
-     * Set full internet access for subscribed users
-     */
-    public static function setFullInternetAccess($username, $uploadKbps = null, $downloadKbps = null)
-    {
-        // Add user to subscribed users list
-        self::setMikrotikAddressList($username, 'subscribed-users');
-        
-        // Remove portal-only filter
-        self::where('username', $username)
-            ->where('attribute', 'Filter-Id')
-            ->where('value', 'portal-only-filter')
-            ->delete();
-            
-        // Set bandwidth limits if provided
-        if ($uploadKbps && $downloadKbps) {
-            self::setBandwidthLimit($username, $uploadKbps, $downloadKbps);
-        }
-        
-        // Remove restrictive reply message
-        self::where('username', $username)
-            ->where('attribute', 'Reply-Message')
-            ->delete();
-            
-        return true;
-    }
-
-    /**
-     * Remove user from all access lists (for cleanup)
-     */
-    public static function removeFromAllAccessLists($username)
-    {
-        // Remove from address lists
-        self::where('username', $username)
-            ->where('attribute', 'Mikrotik-Address-List')
-            ->delete();
-            
-        // Remove filter restrictions
-        self::where('username', $username)
-            ->where('attribute', 'Filter-Id')
-            ->delete();
-            
-        return true;
     }
 
     // Cisco/Generic attributes

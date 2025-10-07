@@ -109,86 +109,42 @@ class RadCheck extends Model
 
     public static function redirectUserForExpiration($username)
     {
-        // For expired users, use portal-only mode instead of allowing full access
-        // This will place them in the portal-only-users firewall group for 5 minutes only
-        return self::setPortalOnlyMode($username);
-    }
-
-    /**
-     * Set portal-only mode for unsubscribed users (REJECT authentication)
-     * Portal access is handled by MikroTik firewall rules, not RADIUS
-     * 
-     * How it works:
-     * 1. RADIUS rejects authentication (Auth-Type Reject)
-     * 2. User cannot establish internet connection via RADIUS
-     * 3. MikroTik firewall detects unauthenticated user
-     * 4. Firewall places them in "portal-only-users" address list
-     * 5. Firewall rules allow only portal access for this address list
-     */
-    public static function setPortalOnlyMode($username)
-    {
-        // Set Auth-Type to Reject - they cannot authenticate via RADIUS
-        self::updateOrCreate(
-            ['username' => $username, 'attribute' => 'Auth-Type'],
-            ['op' => ':=', 'value' => 'Reject']
-        );
-        
-        // Set portal-only access message
-        \App\Models\RadReply::updateOrCreate(
-            ['username' => $username, 'attribute' => 'Reply-Message'],
-            ['op' => ':=', 'value' => 'Please renew your subscription to continue using the internet.']
-        );
-        
-        // Place user in portal-only MikroTik address list (via RadReply for firewall rules)
-        \App\Models\RadReply::setPortalOnlyAccess($username);
-        
-        return true;
-    }
-
-    /**
-     * Set full access mode for subscribed users
-     */
-    public static function setFullAccessMode($username, $sessionTimeoutSeconds = null)
-    {
         // Remove any existing blocking
         self::where('username', $username)
             ->where('attribute', 'Auth-Type')
             ->where('value', 'Reject')
             ->delete();
         
-        // Remove portal-only session timeout if no specific timeout provided
-        if ($sessionTimeoutSeconds) {
-            self::setSessionTimeout($username, $sessionTimeoutSeconds);
-        } else {
-            // Remove session timeout for unlimited sessions
-            self::where('username', $username)
-                ->where('attribute', 'Session-Timeout')
-                ->delete();
-        }
+        // Set very restrictive bandwidth (1 kbps) to allow minimal access
+        \App\Models\RadReply::updateOrCreate(
+            ['username' => $username, 'attribute' => 'WISPr-Bandwidth-Max-Down'],
+            ['op' => ':=', 'value' => '1024'] // 1 kbps
+        );
         
-        // Set full internet access via RadReply
-        \App\Models\RadReply::setFullInternetAccess($username);
+        \App\Models\RadReply::updateOrCreate(
+            ['username' => $username, 'attribute' => 'WISPr-Bandwidth-Max-Up'],
+            ['op' => ':=', 'value' => '1024'] // 1 kbps
+        );
+        
+        // Set short session timeout (5 minutes)
+        \App\Models\RadReply::updateOrCreate(
+            ['username' => $username, 'attribute' => 'Session-Timeout'],
+            ['op' => ':=', 'value' => '300'] // 5 minutes
+        );
+        
+        // Set redirection URL to payment portal
+        \App\Models\RadReply::updateOrCreate(
+            ['username' => $username, 'attribute' => 'WISPr-Redirection-URL'],
+            ['op' => ':=', 'value' => 'https://jaynet.vasgh.com/portal']
+        );
+        
+        // Set informative message
+        \App\Models\RadReply::updateOrCreate(
+            ['username' => $username, 'attribute' => 'Reply-Message'],
+            ['op' => ':=', 'value' => 'Your package has expired. You will be redirected to renew your subscription.']
+        );
         
         return true;
-    }
-
-    /**
-     * Check if user is in portal-only mode
-     */
-    public static function isInPortalOnlyMode($username)
-    {
-        // Portal-only mode is indicated by Auth-Type Reject with portal-only filter
-        $hasAuthReject = self::where('username', $username)
-            ->where('attribute', 'Auth-Type')
-            ->where('value', 'Reject')
-            ->exists();
-            
-        $hasPortalFilter = \App\Models\RadReply::where('username', $username)
-            ->where('attribute', 'Filter-Id')
-            ->where('value', 'portal-only-filter')
-            ->exists();
-            
-        return $hasAuthReject && $hasPortalFilter;
     }
 
     public static function unblockUser($username)

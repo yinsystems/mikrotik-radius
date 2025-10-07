@@ -572,7 +572,7 @@ class CaptivePortalController extends Controller
             ];
 
             // Add voucher code if provided (for VODAFONE/TELECEL)
-            if ($request->has('voucher_code') && !empty($request?->voucher_code)) {
+            if ($request->has('voucher_code') && !empty($request->voucher_code)) {
                 $paymentData['voucher_code'] = $request->voucher_code;
             }
             $result = $this->paymentService->createSubscriptionPayment($paymentData);
@@ -795,20 +795,6 @@ class CaptivePortalController extends Controller
         // Keep backward compatibility for existing code
         Session::put('customer_id', $customerId);
         Session::put('customer_phone', $phone);
-
-        // Apply appropriate RADIUS access based on subscription status
-        $customer = Customer::find($customerId);
-        if ($customer) {
-            $accessStatus = $customer->applyRadiusAccess();
-
-            // Log the access type applied
-            Log::info('RADIUS access applied for customer login', [
-                'customer_id' => $customerId,
-                'phone' => $phone,
-                'access_status' => $accessStatus,
-                'username' => $customer->username
-            ]);
-        }
     }
 
     /**
