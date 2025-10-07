@@ -115,24 +115,7 @@ class RadCheck extends Model
             ->where('value', 'Reject')
             ->delete();
         
-        // Set very restrictive bandwidth (1 kbps) to allow minimal access
-        \App\Models\RadReply::updateOrCreate(
-            ['username' => $username, 'attribute' => 'WISPr-Bandwidth-Max-Down'],
-            ['op' => ':=', 'value' => '1024'] // 1 kbps
-        );
-        
-        \App\Models\RadReply::updateOrCreate(
-            ['username' => $username, 'attribute' => 'WISPr-Bandwidth-Max-Up'],
-            ['op' => ':=', 'value' => '1024'] // 1 kbps
-        );
-        
-        // Set short session timeout (5 minutes)
-        \App\Models\RadReply::updateOrCreate(
-            ['username' => $username, 'attribute' => 'Session-Timeout'],
-            ['op' => ':=', 'value' => '300'] // 5 minutes
-        );
-        
-        // Set redirection URL to payment portal
+        // Set redirection for expired users
         \App\Models\RadReply::updateOrCreate(
             ['username' => $username, 'attribute' => 'WISPr-Redirection-URL'],
             ['op' => ':=', 'value' => 'https://jaynet.vasgh.com/portal']
@@ -145,6 +128,73 @@ class RadCheck extends Model
         );
         
         return true;
+    }
+
+    /**
+     * Set portal-only mode for unsubscribed users (5 minutes access)
+     */
+    public static function setPortalOnlyMode($username)
+    {
+        // Remove any existing blocking
+        self::where('username', $username)
+            ->where('attribute', 'Auth-Type')
+            ->where('value', 'Reject')
+            ->delete();
+        
+        // Set 5-minute session timeout
+        self::setSessionTimeout($username, 300); // 5 minutes
+        
+        // Set portal-only access via RadReply
+        \App\Models\RadReply::setPortalOnlyAccess($username);
+        
+        return true;
+    }
+
+    /**
+     * Set full access mode for subscribed users
+     */
+    public static function setFullAccessMode($username, $sessionTimeoutSeconds = null)
+    {
+        // Remove any existing blocking
+        self::where('username', $username)
+            ->where('attribute', 'Auth-Type')
+            ->where('value', 'Reject')
+            ->delete();
+        
+        // Remove portal-only session timeout if no specific timeout provided
+        if ($sessionTimeoutSeconds) {
+            self::setSessionTimeout($username, $sessionTimeoutSeconds);
+        } else {
+            // Remove session timeout for unlimited sessions
+            self::where('username', $username)
+                ->where('attribute', 'Session-Timeout')
+                ->delete();
+        }
+        
+        // Set full internet access via RadReply
+        \App\Models\RadReply::setFullInternetAccess($username);
+        
+        return true;
+    }
+
+    /**
+     * Check if user is in portal-only mode
+     */
+    public static function isInPortalOnlyMode($username)
+    {
+        // Check if user has portal-only filter
+        $hasPortalFilter = \App\Models\RadReply::where('username', $username)
+            ->where('attribute', 'Filter-Id')
+            ->where('value', 'portal-only-filter')
+            ->exists();
+            
+        // Check if user has 5-minute session timeout
+        $hasPortalTimeout = self::where('username', $username)
+            ->where('attribute', 'Session-Timeout')
+            ->where('value', 300)
+            ->exists();
+            
+        return $hasPortalFilter && $hasPortalTimeout;
     }
 
     public static function unblockUser($username)

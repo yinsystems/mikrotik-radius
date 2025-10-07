@@ -5,6 +5,14 @@
 @section('content')
 <div class="space-y-6">
     <!-- Header -->
+    <!-- Navigation -->
+    <div class="flex justify-between items-center pt-4">
+        <a href="{{ route('portal.dashboard') }}"
+           class="text-gray-600 hover:text-gray-700 flex items-center space-x-2">
+            <i class="fas fa-arrow-left"></i>
+            <span>Back</span>
+        </a>
+    </div>
     <div class="text-center">
         <div class="w-16 h-16 mx-auto mb-4 flex items-center justify-center">
             <img src="{{ asset('logo/wifi.png') }}" alt="WiFi Logo" class="max-w-full max-h-full object-contain">

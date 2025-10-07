@@ -162,7 +162,6 @@ class ReddePaymentService
             'clientreference' => $data['reference'] ?? $this->generateReference(),
             'clienttransid' => $data['client_transaction_id'] ?? $this->generateClientTransactionId(),
             'description' => $data['description'] ?? 'Payment for subscription',
-            'vouchercode' => $data['vouchercode'] ,
             'nickname' => $this->nickname,
             'paymentoption' => strtoupper($data['payment_option']),
             'walletnumber' => $data['phone_number'],
@@ -392,6 +391,7 @@ class ReddePaymentService
             'reference' => $data['reference'] ?? null,
             'client_transaction_id' => $data['client_transaction_id'] ?? null,
         ];
+        error_log(json_encode($paymentData));
         return $this->receive($paymentData);
     }
 

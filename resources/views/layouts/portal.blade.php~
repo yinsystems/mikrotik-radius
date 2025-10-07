@@ -156,7 +156,7 @@ $settings = new \App\Settings\GeneralSettings();
         <div class="flex items-center justify-center min-h-screen">
             <div class="bg-white rounded-lg p-6 flex items-center space-x-3">
                 <div class="spinner"></div>
-                <span> <i class="fas fa-spinner fa-spin"></i> Processing...</span>
+                <span> <i class="fa-solid fa-spinner fa-spin"></i> Processing...</span>
             </div>
         </div>
     </div>

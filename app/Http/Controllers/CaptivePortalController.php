@@ -513,8 +513,16 @@ class CaptivePortalController extends Controller
     {
         $validator = Validator::make($request->all(), [
             'package_id' => 'required|exists:packages,id',
-            'network' => 'required|in:mtn,AIRTELTIGO,VODAFONE',
+            'network' => 'required|in:MTN,AIRTELTIGO,VODAFONE,TELECEL',
             'momo_phone' => 'required|string|regex:/^0[0-9]{9}$/',
+            'voucher_code' => 'required_if:network,VODAFONE,TELECEL|nullable|string|size:6|regex:/^[0-9]{6}$/',
+        ]);
+
+        // Add custom validation messages
+        $validator->setCustomMessages([
+            'voucher_code.required_if' => 'Voucher code is required for VODAFONE and TELECEL Cash payments.',
+            'voucher_code.size' => 'Voucher code must be exactly 6 digits.',
+            'voucher_code.regex' => 'Voucher code must contain only numbers.',
         ]);
 
         if ($validator->fails()) {
@@ -563,6 +571,10 @@ class CaptivePortalController extends Controller
                 'client_transaction_id' => $payment->transaction_id,
             ];
 
+            // Add voucher code if provided (for VODAFONE/TELECEL)
+            if ($request->has('voucher_code') && !empty($request->voucher_code)) {
+                $paymentData['voucher_code'] = $request->voucher_code;
+            }
             $result = $this->paymentService->createSubscriptionPayment($paymentData);
 
             if ($result['success']) {
@@ -783,6 +795,20 @@ class CaptivePortalController extends Controller
         // Keep backward compatibility for existing code
         Session::put('customer_id', $customerId);
         Session::put('customer_phone', $phone);
+        
+        // Apply appropriate RADIUS access based on subscription status
+        $customer = Customer::find($customerId);
+        if ($customer) {
+            $accessStatus = $customer->applyRadiusAccess();
+            
+            // Log the access type applied
+            Log::info('RADIUS access applied for customer login', [
+                'customer_id' => $customerId,
+                'phone' => $phone,
+                'access_status' => $accessStatus,
+                'username' => $customer->username
+            ]);
+        }
     }
 
     /**

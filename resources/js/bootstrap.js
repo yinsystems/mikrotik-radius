@@ -1,13 +1,37 @@
 /**
- * We'll load the axios HTTP library which allows us to easily issue requests
- * to our Laravel back-end. This library automatically handles sending the
- * CSRF token as a header based on the value of the "XSRF" token cookie.
+ * We'll use the native fetch API for HTTP requests to our Laravel back-end.
+ * The CSRF token is automatically handled in each request via meta tag.
  */
 
-import axios from 'axios';
-window.axios = axios;
+// Set up default headers for fetch requests
+window.fetchDefaults = {
+    headers: {
+        'X-Requested-With': 'XMLHttpRequest',
+        'Content-Type': 'application/json',
+        'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') || ''
+    }
+};
 
-window.axios.defaults.headers.common['X-Requested-With'] = 'XMLHttpRequest';
+/**
+ * Helper function for making fetch requests with default headers
+ */
+window.fetchWithDefaults = function(url, options = {}) {
+    const defaultOptions = {
+        headers: window.fetchDefaults.headers
+    };
+    
+    // Merge options
+    const mergedOptions = {
+        ...defaultOptions,
+        ...options,
+        headers: {
+            ...defaultOptions.headers,
+            ...options.headers
+        }
+    };
+    
+    return fetch(url, mergedOptions);
+};
 
 /**
  * Echo exposes an expressive API for subscribing to channels and listening

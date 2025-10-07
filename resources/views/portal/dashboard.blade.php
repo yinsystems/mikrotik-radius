@@ -374,126 +374,126 @@ $settings = new \App\Settings\GeneralSettings();
         </div>
     </div>
 
-    <!-- Package History Section -->
-    @if(isset($packageHistory) && $packageHistory->count() > 0)
-        <div class="bg-white rounded-xl card-shadow p-6">
-            <h3 class="text-lg font-semibold text-gray-900 mb-4 flex items-center">
-                <i class="fas fa-history text-indigo-600 mr-2"></i>
-                Complete Package History
-                <span class="ml-auto text-sm text-gray-500 font-normal">{{ $packageHistory->total() }} total</span>
-            </h3>
+{{--    <!-- Package History Section -->--}}
+{{--    @if(isset($packageHistory) && $packageHistory->count() > 0)--}}
+{{--        <div class="bg-white rounded-xl card-shadow p-6">--}}
+{{--            <h3 class="text-lg font-semibold text-gray-900 mb-4 flex items-center">--}}
+{{--                <i class="fas fa-history text-indigo-600 mr-2"></i>--}}
+{{--                Complete Package History--}}
+{{--                <span class="ml-auto text-sm text-gray-500 font-normal">{{ $packageHistory->total() }} total</span>--}}
+{{--            </h3>--}}
 
-            @if($packageHistory->count() > 0)
-                <div class="space-y-4">
-                    @foreach($packageHistory as $subscription)
-                        <div class="border border-gray-200 rounded-lg p-4 hover:shadow-md transition-shadow">
-                            <div class="flex items-start justify-between mb-3">
-                                <div class="flex items-center space-x-3">
-                                    <div class="w-12 h-12 bg-indigo-100 rounded-lg flex items-center justify-center">
-                                        <i class="fas fa-box text-indigo-600"></i>
-                                    </div>
-                                    <div>
-                                        <h4 class="font-semibold text-gray-900">{{ $subscription->package->name }}</h4>
-                                        <p class="text-sm text-gray-500 mb-1">
-                                            Purchased: {{ $subscription->created_at->format('M j, Y g:i A') }}
-                                        </p>
-                                        @if($subscription->expires_at)
-                                            <p class="text-xs text-gray-400">
-                                                @if($subscription->expires_at->isPast())
-                                                    Expired: {{ $subscription->expires_at->format('M j, Y g:i A') }}
-                                                @else
-                                                    Expires: {{ $subscription->expires_at->format('M j, Y g:i A') }}
-                                                @endif
-                                            </p>
-                                        @endif
-                                    </div>
-                                </div>
-                                <div class="text-right">
-                                    <div class="text-xl font-bold text-gray-900">
-                                        GH₵{{ number_format($subscription->package->price, 2) }}
-                                    </div>
-                                    <span class="px-3 py-1 text-sm rounded-full
-                                        @if($subscription->status === 'active') bg-green-100 text-green-800
-                                        @elseif($subscription->status === 'expired') bg-red-100 text-red-800
-                                        @elseif($subscription->status === 'suspended') bg-yellow-100 text-yellow-800
-                                        @elseif($subscription->status === 'pending') bg-blue-100 text-blue-800
-                                        @else bg-gray-100 text-gray-800
-                                        @endif">
-                                        {{ ucfirst($subscription->status) }}
-                                    </span>
-                                </div>
-                            </div>
+{{--            @if($packageHistory->count() > 0)--}}
+{{--                <div class="space-y-4">--}}
+{{--                    @foreach($packageHistory as $subscription)--}}
+{{--                        <div class="border border-gray-200 rounded-lg p-4 hover:shadow-md transition-shadow">--}}
+{{--                            <div class="flex items-start justify-between mb-3">--}}
+{{--                                <div class="flex items-center space-x-3">--}}
+{{--                                    <div class="w-12 h-12 bg-indigo-100 rounded-lg flex items-center justify-center">--}}
+{{--                                        <i class="fas fa-box text-indigo-600"></i>--}}
+{{--                                    </div>--}}
+{{--                                    <div>--}}
+{{--                                        <h4 class="font-semibold text-gray-900">{{ $subscription->package->name }}</h4>--}}
+{{--                                        <p class="text-sm text-gray-500 mb-1">--}}
+{{--                                            Purchased: {{ $subscription->created_at->format('M j, Y g:i A') }}--}}
+{{--                                        </p>--}}
+{{--                                        @if($subscription->expires_at)--}}
+{{--                                            <p class="text-xs text-gray-400">--}}
+{{--                                                @if($subscription->expires_at->isPast())--}}
+{{--                                                    Expired: {{ $subscription->expires_at->format('M j, Y g:i A') }}--}}
+{{--                                                @else--}}
+{{--                                                    Expires: {{ $subscription->expires_at->format('M j, Y g:i A') }}--}}
+{{--                                                @endif--}}
+{{--                                            </p>--}}
+{{--                                        @endif--}}
+{{--                                    </div>--}}
+{{--                                </div>--}}
+{{--                                <div class="text-right">--}}
+{{--                                    <div class="text-xl font-bold text-gray-900">--}}
+{{--                                        GH₵{{ number_format($subscription->package->price, 2) }}--}}
+{{--                                    </div>--}}
+{{--                                    <span class="px-3 py-1 text-sm rounded-full--}}
+{{--                                        @if($subscription->status === 'active') bg-green-100 text-green-800--}}
+{{--                                        @elseif($subscription->status === 'expired') bg-red-100 text-red-800--}}
+{{--                                        @elseif($subscription->status === 'suspended') bg-yellow-100 text-yellow-800--}}
+{{--                                        @elseif($subscription->status === 'pending') bg-blue-100 text-blue-800--}}
+{{--                                        @else bg-gray-100 text-gray-800--}}
+{{--                                        @endif">--}}
+{{--                                        {{ ucfirst($subscription->status) }}--}}
+{{--                                    </span>--}}
+{{--                                </div>--}}
+{{--                            </div>--}}
 
-                            <div class="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm mb-3">
-                                <div class="flex items-center space-x-2">
-                                    <i class="fas fa-download text-blue-500"></i>
-                                    <span class="text-gray-700">{{ $subscription->package->data_limit_display }}</span>
-                                </div>
-                                <div class="flex items-center space-x-2">
-                                    <i class="fas fa-clock text-green-500"></i>
-                                    <span class="text-gray-700">{{ $subscription->package->duration_display }}</span>
-                                </div>
-                                <div class="flex items-center space-x-2">
-                                    <i class="fas fa-tachometer-alt text-purple-500"></i>
-                                    <span class="text-gray-700">{{ $subscription->package->bandwidth_display }}</span>
-                                </div>
-                                <div class="flex items-center space-x-2">
-                                    <i class="fas fa-users text-orange-500"></i>
-                                    <span class="text-gray-700">{{ $subscription->package->simultaneous_users ?? 'Unlimited' }} Devices</span>
-                                </div>
-                            </div>
+{{--                            <div class="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm mb-3">--}}
+{{--                                <div class="flex items-center space-x-2">--}}
+{{--                                    <i class="fas fa-download text-blue-500"></i>--}}
+{{--                                    <span class="text-gray-700">{{ $subscription->package->data_limit_display }}</span>--}}
+{{--                                </div>--}}
+{{--                                <div class="flex items-center space-x-2">--}}
+{{--                                    <i class="fas fa-clock text-green-500"></i>--}}
+{{--                                    <span class="text-gray-700">{{ $subscription->package->duration_display }}</span>--}}
+{{--                                </div>--}}
+{{--                                <div class="flex items-center space-x-2">--}}
+{{--                                    <i class="fas fa-tachometer-alt text-purple-500"></i>--}}
+{{--                                    <span class="text-gray-700">{{ $subscription->package->bandwidth_display }}</span>--}}
+{{--                                </div>--}}
+{{--                                <div class="flex items-center space-x-2">--}}
+{{--                                    <i class="fas fa-users text-orange-500"></i>--}}
+{{--                                    <span class="text-gray-700">{{ $subscription->package->simultaneous_users ?? 'Unlimited' }} Devices</span>--}}
+{{--                                </div>--}}
+{{--                            </div>--}}
 
-                            @if($subscription->payment)
-                                <div class="border-t border-gray-100 pt-3 flex items-center justify-between text-sm">
-                                    <div class="flex items-center space-x-4">
-                                        <span class="text-gray-600">
-                                            <i class="fas fa-credit-card mr-1"></i>
-                                            Payment: {{ ucfirst($subscription->payment->method) }}
-                                        </span>
-                                        <span class="px-2 py-1 text-xs rounded-full
-                                            @if($subscription->payment->status === 'completed') bg-green-100 text-green-800
-                                            @elseif($subscription->payment->status === 'failed') bg-red-100 text-red-800
-                                            @elseif($subscription->payment->status === 'pending') bg-yellow-100 text-yellow-800
-                                            @else bg-gray-100 text-gray-800
-                                            @endif">
-                                            {{ ucfirst($subscription->payment->status) }}
-                                        </span>
-                                    </div>
-                                    @if($subscription->payment->reference)
-                                        <span class="text-gray-500 font-mono text-xs">
-                                            Ref: {{ $subscription->payment->reference }}
-                                        </span>
-                                    @endif
-                                </div>
-                            @endif
-                        </div>
-                    @endforeach
-                </div>
+{{--                            @if($subscription->payment)--}}
+{{--                                <div class="border-t border-gray-100 pt-3 flex items-center justify-between text-sm">--}}
+{{--                                    <div class="flex items-center space-x-4">--}}
+{{--                                        <span class="text-gray-600">--}}
+{{--                                            <i class="fas fa-credit-card mr-1"></i>--}}
+{{--                                            Payment: {{ ucfirst($subscription->payment->method) }}--}}
+{{--                                        </span>--}}
+{{--                                        <span class="px-2 py-1 text-xs rounded-full--}}
+{{--                                            @if($subscription->payment->status === 'completed') bg-green-100 text-green-800--}}
+{{--                                            @elseif($subscription->payment->status === 'failed') bg-red-100 text-red-800--}}
+{{--                                            @elseif($subscription->payment->status === 'pending') bg-yellow-100 text-yellow-800--}}
+{{--                                            @else bg-gray-100 text-gray-800--}}
+{{--                                            @endif">--}}
+{{--                                            {{ ucfirst($subscription->payment->status) }}--}}
+{{--                                        </span>--}}
+{{--                                    </div>--}}
+{{--                                    @if($subscription->payment->reference)--}}
+{{--                                        <span class="text-gray-500 font-mono text-xs">--}}
+{{--                                            Ref: {{ $subscription->payment->reference }}--}}
+{{--                                        </span>--}}
+{{--                                    @endif--}}
+{{--                                </div>--}}
+{{--                            @endif--}}
+{{--                        </div>--}}
+{{--                    @endforeach--}}
+{{--                </div>--}}
 
-                <!-- Pagination -->
-                @if($packageHistory->hasPages())
-                    <div class="mt-6 flex justify-center">
-                        {{ $packageHistory->links() }}
-                    </div>
-                @endif
-            @endif
-        </div>
-    @else
-        <div class="bg-gray-50 rounded-xl p-8 text-center">
-            <div class="w-16 h-16 mx-auto bg-gray-200 rounded-full flex items-center justify-center mb-4">
-                <i class="fas fa-history text-2xl text-gray-400"></i>
-            </div>
-            <h3 class="text-lg font-medium text-gray-900 mb-2">No Package History</h3>
-            <p class="text-gray-600 text-sm mb-4">
-                You haven't purchased any packages yet. Start by selecting a package that suits your needs.
-            </p>
-            <a href="{{ route('portal.packages') }}"
-               class="inline-flex items-center space-x-2 bg-blue-600 text-white px-4 py-2 rounded-lg font-medium hover:bg-blue-700 transition-colors">
-                <i class="fas fa-shopping-cart"></i>
-                <span>Browse Packages</span>
-            </a>
-        </div>
-    @endif
+{{--                <!-- Pagination -->--}}
+{{--                @if($packageHistory->hasPages())--}}
+{{--                    <div class="mt-6 flex justify-center">--}}
+{{--                        {{ $packageHistory->links() }}--}}
+{{--                    </div>--}}
+{{--                @endif--}}
+{{--            @endif--}}
+{{--        </div>--}}
+{{--    @else--}}
+{{--        <div class="bg-gray-50 rounded-xl p-8 text-center">--}}
+{{--            <div class="w-16 h-16 mx-auto bg-gray-200 rounded-full flex items-center justify-center mb-4">--}}
+{{--                <i class="fas fa-history text-2xl text-gray-400"></i>--}}
+{{--            </div>--}}
+{{--            <h3 class="text-lg font-medium text-gray-900 mb-2">No Package History</h3>--}}
+{{--            <p class="text-gray-600 text-sm mb-4">--}}
+{{--                You haven't purchased any packages yet. Start by selecting a package that suits your needs.--}}
+{{--            </p>--}}
+{{--            <a href="{{ route('portal.packages') }}"--}}
+{{--               class="inline-flex items-center space-x-2 bg-blue-600 text-white px-4 py-2 rounded-lg font-medium hover:bg-blue-700 transition-colors">--}}
+{{--                <i class="fas fa-shopping-cart"></i>--}}
+{{--                <span>Browse Packages</span>--}}
+{{--            </a>--}}
+{{--        </div>--}}
+{{--    @endif--}}
 
     <!-- Navigation -->
     <div class="flex justify-between items-center pt-4">

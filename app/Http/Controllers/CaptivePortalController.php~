@@ -513,8 +513,16 @@ class CaptivePortalController extends Controller
     {
         $validator = Validator::make($request->all(), [
             'package_id' => 'required|exists:packages,id',
-            'network' => 'required|in:mtn,AIRTELTIGO,VODAFONE',
+            'network' => 'required|in:MTN,AIRTELTIGO,VODAFONE,TELECEL',
             'momo_phone' => 'required|string|regex:/^0[0-9]{9}$/',
+            'voucher_code' => 'required_if:network,VODAFONE,TELECEL|nullable|string|size:6|regex:/^[0-9]{6}$/',
+        ]);
+
+        // Add custom validation messages
+        $validator->setCustomMessages([
+            'voucher_code.required_if' => 'Voucher code is required for VODAFONE and TELECEL Cash payments.',
+            'voucher_code.size' => 'Voucher code must be exactly 6 digits.',
+            'voucher_code.regex' => 'Voucher code must contain only numbers.',
         ]);
 
         if ($validator->fails()) {
@@ -563,6 +571,11 @@ class CaptivePortalController extends Controller
                 'client_transaction_id' => $payment->transaction_id,
             ];
 
+            // Add voucher code if provided (for VODAFONE/TELECEL)
+            if ($request->has('voucher_code') && !empty($request->voucher_code)) {
+                $paymentData['voucher_code'] = $request->voucher_code;
+            }
+    error_log(json_encode($paymentData));
             $result = $this->paymentService->createSubscriptionPayment($paymentData);
 
             if ($result['success']) {
@@ -628,11 +641,7 @@ class CaptivePortalController extends Controller
                     'success' => true,
                     'status' => 'completed',
                     'message' => 'Payment completed successfully!',
-<<<<<<< HEAD
                     'redirect' => 'http://192.168.77.1/logout',
-=======
-                    'redirect' => 'http://192.168.77.1/login',
->>>>>>> 592cc4b1e92f976512818663196c0210c177dc63
                     'router_redirect' => true,
                     'credentials' => [
                         'username' => $payment->customer->username,
@@ -676,11 +685,7 @@ class CaptivePortalController extends Controller
                             'success' => true,
                             'status' => 'completed',
                             'message' => 'Payment completed successfully! Your subscription is now active.',
-<<<<<<< HEAD
                             'redirect' => 'http://192.168.77.1/logout',
-=======
-                            'redirect' => 'http://192.168.77.1/login',
->>>>>>> 592cc4b1e92f976512818663196c0210c177dc63
                             'router_redirect' => true,
                             'credentials' => [
                                 'username' => $payment->customer->username,
@@ -939,11 +944,6 @@ class CaptivePortalController extends Controller
     {
         try {
             $settings = app(GeneralSettings::class);
-<<<<<<< HEAD
-
-=======
-            
->>>>>>> 592cc4b1e92f976512818663196c0210c177dc63
             return response()->json([
                 'success' => true,
                 'registration_otp_enabled' => $settings->enable_otp_verification ?? true,
