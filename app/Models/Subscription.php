@@ -334,8 +334,8 @@ class Subscription extends Model
                         );
                     }
                 } else {
-                    // Redirect user to payment portal instead of blocking
-                    RadCheck::redirectUserForExpiration($this->username);
+                    // For expired active subscriptions, place in portal-only mode (REJECT authentication)
+                    RadCheck::setPortalOnlyMode($this->username);
                     
                     // Immediately disconnect active sessions via MikroTik API
                     $this->disconnectActiveSessions();
@@ -351,7 +351,8 @@ class Subscription extends Model
                 break;
                 
             case 'expired':
-                RadCheck::redirectUserForExpiration($this->username);
+                // For expired subscriptions, place in portal-only mode (REJECT authentication)
+                RadCheck::setPortalOnlyMode($this->username);
                 
                 // Disconnect active sessions for expired users
                 $this->disconnectActiveSessions();

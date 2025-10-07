@@ -67,7 +67,7 @@ class ExpireSubscriptions extends Command
             }
         }
 
-        // 3. Expire old subscriptions
+        // 3. Expire old subscriptions (places users in portal-only mode with Auth-Type Reject)
         $this->info('⏰ Expiring old subscriptions...');
         
         if (!$isDryRun) {
