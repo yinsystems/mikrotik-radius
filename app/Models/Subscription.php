@@ -937,23 +937,39 @@ class Subscription extends Model
     }
     
     /**
-     * Set Session-Timeout for time-based packages
+     * Get session timeout in seconds based on package
      */
-    private function setUserSessionTimeout()
+    public function getSessionTimeoutSeconds()
     {
+        if (!$this->package) {
+            return null;
+        }
+
         // Calculate session duration in seconds based on package
-        $totalSeconds = match($this->package->duration_type) {
+        return match($this->package->duration_type) {
             'minutely' => $this->package->duration_value * 60,
             'hourly' => $this->package->duration_value * 3600,
             'daily' => $this->package->duration_value * 24 * 3600,
             'weekly' => $this->package->duration_value * 7 * 24 * 3600,
             'monthly' => $this->package->duration_value * 30 * 24 * 3600,
-            'trial' => $this->package->trial_duration_hours * 3600,
+            'trial' => $this->package->trial_duration_hours ? 
+                       $this->package->trial_duration_hours * 3600 : 
+                       $this->package->duration_value * 3600, // fallback to duration_value for trials
             default => 24 * 3600 // Default to 1 day
         };
+    }
+
+    /**
+     * Set Session-Timeout for time-based packages
+     */
+    private function setUserSessionTimeout()
+    {
+        $totalSeconds = $this->getSessionTimeoutSeconds();
         
-        // Set Session-Timeout for this user (per session limit)
-        RadCheck::setSessionTimeout($this->username, $totalSeconds);
+        if ($totalSeconds) {
+            // Set Session-Timeout for this user (per session limit)
+            RadCheck::setSessionTimeout($this->username, $totalSeconds);
+        }
     }
 
     /**

@@ -23,10 +23,10 @@ class CustomerEventListener
         }
 
         // Auto-assign trial package for new customers
-        $this->assignTrialPackage($customer);
+//        $this->assignTrialPackage($customer);
 
         // Send welcome notification with account details
-        $this->sendWelcomeNotification($customer);
+//        $this->sendWelcomeNotification($customer);
     }
 
     public function updated(Customer $customer)

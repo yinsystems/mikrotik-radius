@@ -2,6 +2,7 @@
 
 use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\CaptivePortalController;
+use App\Http\Controllers\WifiUssdController;
 
 /*
 |--------------------------------------------------------------------------
@@ -17,6 +18,9 @@ use App\Http\Controllers\CaptivePortalController;
 Route::get('/', function () {
     return "Welcome to the Captive Portal";
 });
+
+// WiFi USSD Routes
+Route::post('/wifi-ussd', WifiUssdController::class)->name('wifi.ussd');
 
 // Captive Portal Routes
 Route::group(['prefix' => 'portal', 'as' => 'portal.'], function () {

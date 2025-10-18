@@ -1,0 +1,593 @@
+USSD WiFi Portal - Complete Step-by-Step Flow
+==============================================
+
+Every Single USSD Screen & User Interaction
+==========================================
+
+========================================
+STEP 1: INITIAL DIAL
+========================================
+
+USER ACTION: Dials *123#
+
+SYSTEM RESPONSE:
+----------------
+Welcome to WiFi Portal
+1. Buy Internet Package
+2. Get Free Trial (30min)
+3. My Active Token
+4. Help & Support
+Reply with option number
+
+WHAT HAPPENS:
+- Check if phone number exists in system
+- Create session in Redis (5min TTL)
+- Show main menu
+- Wait for user input (1-4)
+
+========================================
+PATH A: BUY PACKAGE FLOW
+========================================
+
+STEP A1: USER SELECTS "1" (Buy Package)
+========================================
+
+USER INPUT: 1
+
+SYSTEM RESPONSE:
+----------------
+Select Internet Package:
+1. Basic - GH₵1.00
+   100MB, Valid 1 hour
+2. Standard - GH₵3.00
+   500MB, Valid 6 hours
+3. Premium - GH₵5.00
+   1GB, Valid 12 hours
+4. Pro - GH₵10.00
+   3GB, Valid 24 hours
+0. Back to Main Menu
+
+WHAT HAPPENS:
+- Fetch available packages from database
+- Display packages with price, data, duration
+- Update session step to "select_package"
+- Wait for user input (1-4 or 0)
+
+STEP A2: USER SELECTS PACKAGE
+========================================
+
+USER INPUT: 2 (Standard Package)
+
+SYSTEM RESPONSE:
+----------------
+CONFIRM PURCHASE
+Package: Standard
+Price: GH₵3.00
+Data: 500MB
+Duration: 6 hours
+
+1. Confirm & Pay
+2. Choose Different Package
+0. Cancel
+
+WHAT HAPPENS:
+- Store selected package ID in session
+- Calculate total price
+- Update session step to "confirm_package"
+- Wait for user input (1, 2, or 0)
+
+STEP A3a: USER CONFIRMS (Registered User)
+========================================
+
+USER INPUT: 1 (Confirm & Pay)
+
+SYSTEM CHECK: Phone number is registered
+
+SYSTEM RESPONSE:
+----------------
+PAYMENT CONFIRMATION
+John Doe (+233501234567)
+Standard Package - GH₵3.00
+
+Payment will be deducted from:
+MTN Mobile Money
+
+1. Authorize Payment
+2. Cancel
+
+WHAT HAPPENS:
+- Check user registration status
+- Load user details from database
+- Prepare payment request
+- Update session step to "payment_confirmation"
+- Wait for user input (1 or 2)
+
+STEP A3b: USER CONFIRMS (Unregistered User)
+========================================
+
+USER INPUT: 1 (Confirm & Pay)
+
+SYSTEM CHECK: Phone number NOT registered
+
+SYSTEM RESPONSE:
+----------------
+REGISTRATION REQUIRED
+Your number is not registered.
+
+Enter your full name:
+(e.g. John Doe)
+
+0. Cancel
+
+WHAT HAPPENS:
+- Detect unregistered phone number
+- Request user registration
+- Update session step to "registration"
+- Wait for text input (name) or 0
+
+STEP A4a: PAYMENT AUTHORIZATION (Registered)
+========================================
+
+USER INPUT: 1 (Authorize Payment)
+
+SYSTEM RESPONSE:
+----------------
+PROCESSING PAYMENT...
+Please check your phone for 
+Mobile Money authorization.
+
+This may take up to 30 seconds.
+
+WHAT HAPPENS:
+- Initiate Mobile Money API call
+- Send STK push to user's phone
+- Create order record in database
+- Update session step to "processing_payment"
+- Start payment status polling
+
+STEP A4b: USER REGISTRATION
+========================================
+
+USER INPUT: John Doe
+
+SYSTEM RESPONSE:
+----------------
+REGISTRATION COMPLETE
+Welcome John Doe!
+
+Proceeding to payment...
+Standard Package - GH₵3.00
+
+1. Authorize Payment
+2. Cancel
+
+WHAT HAPPENS:
+- Create new user record with name and phone
+- Store user ID in session
+- Update session step to "payment_confirmation"
+- Prepare payment request
+- Wait for user input (1 or 2)
+
+STEP A5a: PAYMENT SUCCESS
+========================================
+
+SYSTEM CHECK: Payment completed successfully
+
+SYSTEM RESPONSE:
+----------------
+PAYMENT SUCCESSFUL!
+
+Your WiFi Token:
+WIFI-A7B9-C2D5
+
+Valid for: 6 hours
+Expires: Oct 17, 8:00 PM
+
+SMS sent with login details.
+Connect at: wifi.portal.com
+
+1. Buy Another Package
+0. Exit
+
+WHAT HAPPENS:
+- Generate unique WiFi token
+- Create subscription record
+- Store token in database with expiry
+- Send SMS with token and instructions
+- Update session step to "success"
+- Wait for user input (1 or 0)
+
+STEP A5b: PAYMENT FAILED
+========================================
+
+SYSTEM CHECK: Payment failed or cancelled
+
+SYSTEM RESPONSE:
+----------------
+PAYMENT FAILED
+Reason: Insufficient balance
+
+Your payment could not be 
+processed. Please ensure you 
+have sufficient balance.
+
+1. Try Again
+2. Choose Different Package
+0. Cancel
+
+WHAT HAPPENS:
+- Log payment failure reason
+- Keep session and package selection
+- Update session step to "payment_failed"
+- Wait for user input (1, 2, or 0)
+
+========================================
+PATH B: FREE TRIAL FLOW
+========================================
+
+STEP B1: USER SELECTS "2" (Free Trial)
+========================================
+
+USER INPUT: 2
+
+SYSTEM CHECK: Trial eligibility
+
+CASE B1a: TRIAL AVAILABLE
+========================================
+
+SYSTEM RESPONSE:
+----------------
+FREE TRIAL AVAILABLE!
+
+Generating your 30-minute 
+trial token...
+
+Please wait...
+
+WHAT HAPPENS:
+- Check if phone has used trial before
+- Check trial usage limits (1 per phone per month)
+- Update session step to "generating_trial"
+- Generate trial token
+
+STEP B2a: TRIAL TOKEN GENERATED
+========================================
+
+SYSTEM RESPONSE:
+----------------
+TRIAL ACTIVATED!
+
+Your Trial Token:
+TRIAL-X1Y2-Z3A4
+
+Valid for: 30 minutes
+Expires: Oct 17, 3:00 PM
+
+SMS sent with login steps.
+Connect at: wifi.portal.com
+
+Upgrade anytime with *123#
+
+1. Buy Full Package
+0. Exit
+
+WHAT HAPPENS:
+- Generate trial token with 30min expiry
+- Create trial subscription record
+- Mark phone as trial used
+- Send SMS with instructions
+- Update session step to "trial_success"
+- Wait for user input (1 or 0)
+
+CASE B1b: TRIAL NOT AVAILABLE
+========================================
+
+SYSTEM RESPONSE:
+----------------
+TRIAL NOT AVAILABLE
+
+You have already used your 
+free trial this month.
+
+Choose a package instead:
+1. Basic - GH₵1.00
+2. Standard - GH₵3.00  
+3. Premium - GH₵5.00
+0. Exit
+
+WHAT HAPPENS:
+- Check trial usage history
+- Detect previous trial usage
+- Redirect to package selection
+- Update session step to "trial_denied"
+- Wait for user input (1-3 or 0)
+
+========================================
+PATH C: MY TOKEN FLOW
+========================================
+
+STEP C1: USER SELECTS "3" (My Token)
+========================================
+
+USER INPUT: 3
+
+SYSTEM CHECK: Active tokens for phone number
+
+CASE C1a: HAS ACTIVE TOKEN
+========================================
+
+SYSTEM RESPONSE:
+----------------
+ACTIVE TOKEN FOUND
+
+Token: WIFI-A7B9-C2D5
+Package: Standard
+Expires: Oct 17, 8:00 PM
+Time Left: 4h 23m
+
+Data Used: 120MB / 500MB
+Remaining: 380MB
+
+1. Extend Subscription
+2. Buy New Package
+0. Back to Menu
+
+WHAT HAPPENS:
+- Query active subscriptions for phone
+- Calculate remaining time and data
+- Format expiry time
+- Update session step to "show_token"
+- Wait for user input (1, 2, or 0)
+
+CASE C1b: NO ACTIVE TOKEN
+========================================
+
+SYSTEM RESPONSE:
+----------------
+NO ACTIVE TOKEN
+
+You don't have an active 
+internet session.
+
+Get connected now:
+1. Buy Internet Package
+2. Get Free Trial
+0. Back to Menu
+
+WHAT HAPPENS:
+- Check for active subscriptions
+- Find no active tokens
+- Redirect to purchase options
+- Update session step to "no_token"
+- Wait for user input (1, 2, or 0)
+
+========================================
+PATH D: HELP & SUPPORT FLOW
+========================================
+
+STEP D1: USER SELECTS "4" (Help)
+========================================
+
+USER INPUT: 4
+
+SYSTEM RESPONSE:
+----------------
+WIFI PORTAL SUPPORT
+
+WiFi Network: "WiFi_Portal"
+Login Page: wifi.portal.com
+
+Support Contact:
+WhatsApp: +233501234567
+Email: support@portal.com
+Hours: 24/7 Available
+
+1. Contact Support
+0. Back to Menu
+
+WHAT HAPPENS:
+- Display static support information
+- Show connection instructions
+- Update session step to "help"
+- Wait for user input (1 or 0)
+
+STEP D2: CONTACT SUPPORT
+========================================
+
+USER INPUT: 1 (Contact Support)
+
+SYSTEM RESPONSE:
+----------------
+CONTACTING SUPPORT...
+
+A WhatsApp message has been 
+prepared for you.
+
+Your phone: +233501234567
+Issue: General Support
+
+Visit: wa.me/233501234567
+Or call: 0501234567
+
+Thank you for using WiFi Portal!
+
+WHAT HAPPENS:
+- Prepare WhatsApp contact link
+- Log support request
+- End USSD session
+- Optional: Send SMS with contact details
+
+========================================
+UNIVERSAL RESPONSES & ERROR HANDLING
+========================================
+
+INVALID INPUT RESPONSE:
+========================================
+
+USER INPUT: Any invalid number/text
+
+SYSTEM RESPONSE:
+----------------
+INVALID SELECTION
+
+Please choose from the 
+available options only.
+
+Try again or dial *123# 
+to restart.
+
+TIMEOUT RESPONSE (No input for 30 seconds):
+========================================
+
+SYSTEM RESPONSE:
+----------------
+SESSION TIMEOUT
+
+Your session has expired due 
+to inactivity.
+
+Please dial *123# to start 
+a new session.
+
+Thank you!
+
+SYSTEM ERROR RESPONSE:
+========================================
+
+SYSTEM RESPONSE:
+----------------
+SYSTEM ERROR
+
+We're experiencing technical 
+difficulties. Please try 
+again in a few minutes.
+
+For urgent support:
+WhatsApp: +233501234567
+
+Sorry for the inconvenience.
+
+BACK/CANCEL FLOWS:
+========================================
+
+When user selects "0" (Back/Cancel):
+- Return to previous menu level
+- Maintain session state
+- Clear current step data only
+
+EXIT FLOWS:
+========================================
+
+Final exit message for successful completion:
+
+SYSTEM RESPONSE:
+----------------
+Thank you for using 
+WiFi Portal!
+
+Enjoy your internet access.
+
+For support: *123# then 4
+WhatsApp: +233501234567
+
+Have a great day!
+
+========================================
+SMS TEMPLATES SENT AFTER TOKEN GENERATION
+========================================
+
+PAID PACKAGE SMS:
+----------------
+WiFi Portal - Token Ready!
+
+Your WiFi Token: WIFI-A7B9-C2D5
+Package: Standard (500MB, 6hrs)
+Expires: Oct 17, 2025 8:00 PM
+
+CONNECT NOW:
+1. Join WiFi network "WiFi_Portal"  
+2. Open browser → wifi.portal.com
+3. Enter token: WIFI-A7B9-C2D5
+4. Start browsing!
+
+Need help? WhatsApp +233501234567
+Buy more packages: Dial *123#
+
+TRIAL SMS:
+----------------
+WiFi Portal - FREE Trial!
+
+Your Trial Token: TRIAL-X1Y2-Z3A4
+Duration: 30 minutes FREE
+Expires: Oct 17, 2025 3:00 PM
+
+CONNECT NOW:
+1. Join WiFi "WiFi_Portal"
+2. Go to wifi.portal.com  
+3. Enter: TRIAL-X1Y2-Z3A4
+4. Enjoy 30min FREE internet!
+
+Upgrade to unlimited: *123#
+Support: WhatsApp +233501234567
+
+========================================
+SESSION STATE MANAGEMENT
+========================================
+
+Redis Session Data Structure:
+{
+  "session_id": "ussd_abc123",
+  "phone": "+233501234567", 
+  "step": "current_step_name",
+  "user_id": 123,
+  "selected_package_id": 2,
+  "selected_package_name": "Standard",
+  "selected_package_price": 3.00,
+  "order_id": "ord_xyz789",
+  "created_at": "2025-10-17T14:30:00Z",
+  "expires_at": "2025-10-17T14:35:00Z"
+}
+
+Session Steps:
+- "main_menu"
+- "select_package" 
+- "confirm_package"
+- "registration"
+- "payment_confirmation"
+- "processing_payment"
+- "payment_failed"
+- "success"
+- "generating_trial"
+- "trial_success"
+- "trial_denied"
+- "show_token"
+- "no_token"
+- "help"
+
+========================================
+BUSINESS RULES & VALIDATIONS
+========================================
+
+Trial Eligibility:
+- 1 trial per phone number per 30 days
+- Trial duration: 30 minutes
+- Trial data: 100MB (or unlimited with time limit)
+
+Payment Rules:
+- Minimum amount: GH₵1.00
+- Maximum amount: GH₵50.00 per transaction
+- Payment timeout: 60 seconds
+- Retry limit: 3 attempts per session
+
+Token Rules:
+- Format: WIFI-XXXX-XXXX or TRIAL-XXXX-XXXX
+- Length: 14 characters including hyphens
+- Valid characters: A-Z, 2-9 (no confusing chars)
+- Expiry: Based on package duration
+- Single use per device (configurable)
+
+Rate Limiting:
+- Max 5 USSD sessions per phone per minute
+- Max 10 failed payment attempts per day
+- Session timeout: 5 minutes
+- Maximum session duration: 10 minutes
