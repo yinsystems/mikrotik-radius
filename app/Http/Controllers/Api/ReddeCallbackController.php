@@ -8,6 +8,7 @@ use App\Models\Customer;
 use App\Models\Subscription;
 use App\Models\Package;
 use App\Services\NotificationService;
+use Exception;
 use Illuminate\Http\Request;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Support\Facades\Log;
@@ -37,7 +38,7 @@ class ReddeCallbackController extends Controller
         try {
             // Extract callback data
             $callbackData = $this->extractCallbackData($request);
-            
+
             // Validate required fields
             if (!$this->validateCallbackData($callbackData)) {
                 Log::error('Invalid callback data received', $callbackData);
@@ -51,7 +52,7 @@ class ReddeCallbackController extends Controller
 
             // Find payment record by reference
             $payment = $this->findPaymentByReference($callbackData);
-            
+
             if (!$payment) {
                 Log::warning('Payment not found for callback', $callbackData);
                 DB::rollback();
@@ -85,9 +86,9 @@ class ReddeCallbackController extends Controller
                 'payment_id' => $payment->id,
             ]);
 
-        } catch (\Exception $e) {
+        } catch (Exception $e) {
             DB::rollback();
-            
+
             Log::error('Payment callback processing failed', [
                 'request' => $request->all(),
                 'error' => $e->getMessage(),
@@ -115,7 +116,7 @@ class ReddeCallbackController extends Controller
         try {
             // Extract callback data
             $callbackData = $this->extractCallbackData($request);
-            
+
             // Validate required fields
             if (!$this->validateCallbackData($callbackData)) {
                 Log::error('Invalid cashout callback data received', $callbackData);
@@ -142,9 +143,9 @@ class ReddeCallbackController extends Controller
                 'message' => 'Cashout callback processed successfully',
             ]);
 
-        } catch (\Exception $e) {
+        } catch (Exception $e) {
             DB::rollback();
-            
+
             Log::error('Cashout callback processing failed', [
                 'request' => $request->all(),
                 'error' => $e->getMessage(),
@@ -164,15 +165,15 @@ class ReddeCallbackController extends Controller
     private function extractCallbackData(Request $request): array
     {
         return [
-            'transaction_id' => $request->input('transaction_id'),
-            'client_transaction_id' => $request->input('client_transaction_id'),
+            'transaction_id' => $request->input('transactionid'),
+            'client_transaction_id' => $request->input('clienttransid'),
             'status' => strtoupper($request->input('status', '')),
             'amount' => $request->input('amount'),
             'currency' => $request->input('currency', 'GHS'),
             'phone_number' => $request->input('phone_number'),
-            'telco_transaction_id' => $request->input('telco_transaction_id'),
+            'telco_transaction_id' => $request->input('telcotransid'),
             'description' => $request->input('description'),
-            'status_date' => $request->input('status_date'),
+            'status_date' => $request->input('statusdate'),
             'reason' => $request->input('reason'),
             'callback_data' => $request->all(),
         ];
@@ -183,9 +184,9 @@ class ReddeCallbackController extends Controller
      */
     private function validateCallbackData(array $data): bool
     {
-        return !empty($data['transaction_id']) && 
-               !empty($data['status']) && 
-               !empty($data['amount']);
+        return !empty($data['transaction_id']) &&
+            !empty($data['status']) &&
+            !empty($data['amount']);
     }
 
     /**
@@ -195,7 +196,7 @@ class ReddeCallbackController extends Controller
     {
         // Try to find by client_transaction_id first (our internal reference)
         if (!empty($callbackData['client_transaction_id'])) {
-            $payment = Payment::where('reference', $callbackData['client_transaction_id'])->first();
+            $payment = Payment::where('transaction_id', $callbackData['client_transaction_id'])->first();
             if ($payment) {
                 return $payment;
             }
@@ -218,7 +219,16 @@ class ReddeCallbackController extends Controller
     private function updatePaymentFromCallback(Payment $payment, array $callbackData): void
     {
         $status = $this->mapReddeStatusToPaymentStatus($callbackData['status']);
-        
+        switch ($status) {
+            case 'PAID':
+                $status = 'completed';
+                break;
+            case 'PROGRESS':
+                $status = 'processing';
+                break;
+            default:
+                break;
+        }
         $updateData = [
             'status' => $status,
             'external_reference' => $callbackData['transaction_id'],
@@ -232,7 +242,7 @@ class ReddeCallbackController extends Controller
 
         // Set payment date if successful
         if ($this->isPaymentSuccessful($callbackData['status'])) {
-            $updateData['payment_date'] = $callbackData['status_date'] ? 
+            $updateData['payment_date'] = $callbackData['status_date'] ?
                 Carbon::parse($callbackData['status_date']) : now();
         }
 
@@ -264,8 +274,7 @@ class ReddeCallbackController extends Controller
         // If this payment is for a subscription, activate it
         if ($payment->subscription_id && $payment->subscription) {
             $this->activateSubscription($payment->subscription, $payment);
-        } 
-        // If this payment is for a package but no subscription exists, create one
+        } // If this payment is for a package but no subscription exists, create one
         elseif ($payment->package_id && $payment->customer_id && !$payment->subscription_id) {
             $subscription = $this->createSubscriptionFromPayment($payment);
             if ($subscription) {
@@ -307,7 +316,7 @@ class ReddeCallbackController extends Controller
     {
         // Calculate subscription dates based on package
         $package = $subscription->package ?? $payment->package;
-        
+
         if (!$package) {
             Log::warning('No package found for subscription activation', [
                 'subscription_id' => $subscription->id,
@@ -324,8 +333,8 @@ class ReddeCallbackController extends Controller
             'starts_at' => $startDate,
             'expires_at' => $endDate,
             'data_used' => 0,
-            'notes' => ($subscription->notes ? $subscription->notes . "\n" : '') . 
-                      "Activated via payment #{$payment->id} on " . now()->format('Y-m-d H:i:s'),
+            'notes' => ($subscription->notes ? $subscription->notes . "\n" : '') .
+                "Activated via payment #{$payment->id} on " . now()->format('Y-m-d H:i:s'),
         ]);
 
         Log::info('Subscription activated', [
@@ -337,7 +346,7 @@ class ReddeCallbackController extends Controller
 
         // Create RADIUS user account
         $this->createRadiusUserAccount($subscription);
-        
+
         // Send subscription activation notification
         $this->sendSubscriptionActivationNotification($subscription, $payment);
     }
@@ -378,7 +387,7 @@ class ReddeCallbackController extends Controller
     {
         // Default to 30 days if no validity period specified
         $validityDays = $package->validity_days ?? 30;
-        
+
         return $startDate->copy()->addDays($validityDays);
     }
 
@@ -390,7 +399,7 @@ class ReddeCallbackController extends Controller
         try {
             // This would integrate with your existing RADIUS user creation logic
             // For now, we'll just log the action
-            
+
             Log::info('RADIUS user account creation initiated', [
                 'subscription_id' => $subscription->id,
                 'username' => $subscription->username, // This uses the getUsernameAttribute() method
@@ -399,8 +408,8 @@ class ReddeCallbackController extends Controller
 
             // TODO: Integrate with MikroTik RADIUS creation
             // This might involve creating RadCheck, RadReply, RadUserGroup entries
-            
-        } catch (\Exception $e) {
+
+        } catch (Exception $e) {
             Log::error('Failed to create RADIUS user account', [
                 'subscription_id' => $subscription->id,
                 'error' => $e->getMessage(),
@@ -415,7 +424,7 @@ class ReddeCallbackController extends Controller
     {
         // Find related payment and process refund
         // This would involve updating payment refund status and possibly affecting subscriptions
-        
+
         Log::info('Refund callback processing', [
             'transaction_id' => $callbackData['transaction_id'],
             'status' => $callbackData['status'],
@@ -481,7 +490,7 @@ class ReddeCallbackController extends Controller
                 'customer_id' => $payment->customer_id,
                 'amount' => $payment->amount,
             ]);
-        } catch (\Exception $e) {
+        } catch (Exception $e) {
             Log::error('Failed to send payment confirmation', [
                 'payment_id' => $payment->id,
                 'error' => $e->getMessage(),
@@ -501,7 +510,7 @@ class ReddeCallbackController extends Controller
                 'customer_id' => $payment->customer_id,
                 'reason' => $payment->failure_reason,
             ]);
-        } catch (\Exception $e) {
+        } catch (Exception $e) {
             Log::error('Failed to send payment failure notification', [
                 'payment_id' => $payment->id,
                 'error' => $e->getMessage(),
@@ -534,7 +543,7 @@ class ReddeCallbackController extends Controller
                 'customer_id' => $subscription->customer_id,
                 'package_name' => $subscription->package->name,
             ]);
-        } catch (\Exception $e) {
+        } catch (Exception $e) {
             Log::error('Failed to send subscription activation notification', [
                 'subscription_id' => $subscription->id,
                 'error' => $e->getMessage(),
