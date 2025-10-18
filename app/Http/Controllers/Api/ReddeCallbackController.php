@@ -240,12 +240,6 @@ class ReddeCallbackController extends Controller
         $updateData = [
             'status' => $status,
             'external_reference' => $callbackData['transaction_id'],
-            'metadata' => array_merge($payment->metadata ?? [], [
-                'callback_data' => $callbackData['callback_data'],
-                'telco_transaction_id' => $callbackData['telco_transaction_id'],
-                'status_date' => $callbackData['status_date'],
-                'callback_received_at' => now()->toISOString(),
-            ]),
         ];
 
         // Set payment date if successful
