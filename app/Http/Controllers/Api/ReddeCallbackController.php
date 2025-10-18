@@ -38,6 +38,10 @@ class ReddeCallbackController extends Controller
         try {
             // Extract callback data
             $callbackData = $this->extractCallbackData($request);
+
+            Log::info("Information Received");
+            Log::info(json_encode($callbackData));
+
             if ($callbackData['status'] === 'progress') {
                 return response()->json([
                     'success' => false,
