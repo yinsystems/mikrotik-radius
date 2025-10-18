@@ -32,18 +32,18 @@ Route::group(['prefix' => 'portal', 'as' => 'portal.'], function () {
     Route::get('/login', [CaptivePortalController::class, 'showLogin'])->name('login');
     Route::post('/login', [CaptivePortalController::class, 'login'])->name('login.submit');
     Route::post('/verify-login-otp', [CaptivePortalController::class, 'verifyLoginOtp'])->name('verify.login.otp');
-    
+
     // Settings check routes
     Route::get('/otp-status', [CaptivePortalController::class, 'getOtpStatus'])->name('otp.status');
-    
+
     // Public package viewing (no authentication required)
     Route::get('/packages', [CaptivePortalController::class, 'showPackages'])->name('packages');
-    
+
     // Public payment routes (no authentication required, but phone must be registered)
     Route::get('/payment', [CaptivePortalController::class, 'showPayment'])->name('payment');
     Route::post('/process-payment', [CaptivePortalController::class, 'processPayment'])->name('process.payment');
     Route::post('/check-payment-status', [CaptivePortalController::class, 'checkPaymentStatus'])->name('check.payment.status');
-    
+
     // Phone number check endpoint (for checking if phone is registered)
     Route::post('/check-phone', [CaptivePortalController::class, 'checkPhoneRegistration'])->name('check.phone');
     Route::post('/select-package', [CaptivePortalController::class, 'selectPackage'])->name('select.package');
@@ -63,4 +63,4 @@ Route::group(['prefix' => 'portal', 'as' => 'portal.'], function () {
 });
 
 // Redde payment callback (outside portal group as it's called by Redde)
-Route::post('/api/redde/callback/receive', [CaptivePortalController::class, 'handlePaymentCallback'])->name('redde.callback');
+//Route::post('/api/redde/callback/receive', [CaptivePortalController::class, 'handlePaymentCallback'])->name('redde.callback');
