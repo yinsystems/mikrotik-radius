@@ -194,8 +194,7 @@ class ReddeCallbackController extends Controller
     private function validateCallbackData(array $data): bool
     {
         return !empty($data['transaction_id']) &&
-            !empty($data['status']) &&
-            !empty($data['amount']);
+            !empty($data['status']);
     }
 
     /**
