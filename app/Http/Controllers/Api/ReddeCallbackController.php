@@ -383,37 +383,42 @@ class ReddeCallbackController extends Controller
     }
 
     /**
-     * Calculate subscription end date
+     * Calculate subscription end date based on package duration
      */
     private function calculateSubscriptionEndDate(Carbon $startDate, Package $package): Carbon
     {
-        // Default to 30 days if no validity period specified
-        $validityDays = $package->validity_days ?? 30;
-
-        return $startDate->copy()->addDays($validityDays);
+        return match($package->duration_type) {
+            'minutely' => $startDate->copy()->addMinutes($package->duration_value),
+            'hourly' => $startDate->copy()->addHours($package->duration_value),
+            'daily' => $startDate->copy()->addDays($package->duration_value),
+            'weekly' => $startDate->copy()->addWeeks($package->duration_value),
+            'monthly' => $startDate->copy()->addMonths($package->duration_value),
+            'trial' => $startDate->copy()->addHours($package->trial_duration_hours ?? 1),
+            default => $startDate->copy()->addDays(1) // Default to 1 day if unknown type
+        };
     }
 
     /**
-     * Create RADIUS user account
+     * Create RADIUS user account using subscription methods
      */
     private function createRadiusUserAccount(Subscription $subscription): void
     {
         try {
-            // This would integrate with your existing RADIUS user creation logic
-            // For now, we'll just log the action
+            // Use the subscription's built-in RADIUS creation methods
+            $subscription->createRadiusUser();
+            $subscription->syncRadiusStatus();
 
-            Log::info('RADIUS user account creation initiated', [
+            Log::info('RADIUS user account created successfully', [
                 'subscription_id' => $subscription->id,
-                'username' => $subscription->username, // This uses the getUsernameAttribute() method
+                'username' => $subscription->username,
                 'package_id' => $subscription->package_id,
+                'package_name' => $subscription->package->name ?? 'Unknown',
             ]);
-
-            // TODO: Integrate with MikroTik RADIUS creation
-            // This might involve creating RadCheck, RadReply, RadUserGroup entries
 
         } catch (Exception $e) {
             Log::error('Failed to create RADIUS user account', [
                 'subscription_id' => $subscription->id,
+                'username' => $subscription->username ?? 'Unknown',
                 'error' => $e->getMessage(),
             ]);
         }
