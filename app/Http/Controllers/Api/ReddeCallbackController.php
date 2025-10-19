@@ -42,7 +42,7 @@ class ReddeCallbackController extends Controller
             Log::info("Information Received");
             Log::info(json_encode($callbackData));
 
-            if ($callbackData['status'] === 'progress') {
+            if ($callbackData['status'] === 'progress' || $callbackData['status'] === 'PROGRESS') {
                 return response()->json([
                     'success' => false,
                     'message' => 'Processing',
