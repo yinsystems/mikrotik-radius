@@ -268,10 +268,46 @@ class HubtelWebhookController extends Controller
         if ($payment->subscription_id && $payment->subscription) {
             $this->activateSubscription($payment->subscription, $payment);
         }
-
+        // If this payment is for a package but no subscription exists, create one
+        elseif ($payment->package_id && $payment->customer_id && !$payment->subscription_id) {
+            $subscription = $this->createSubscriptionFromPayment($payment);
+            if ($subscription) {
+                $payment->update(['subscription_id' => $subscription->id]);
+                $this->activateSubscription($subscription, $payment);
+            }
+        }
 
         // Send payment confirmation notification
         $this->sendPaymentConfirmation($payment);
+    }
+
+    /**
+     * Create subscription from payment - copied from ReddeCallbackController logic
+     */
+    private function createSubscriptionFromPayment(Payment $payment): ?Subscription
+    {
+        if (!$payment->customer || !$payment->package) {
+            Log::warning('Cannot create subscription: missing customer or package', [
+                'payment_id' => $payment->id,
+                'customer_id' => $payment->customer_id,
+                'package_id' => $payment->package_id,
+            ]);
+            return null;
+        }
+
+        $subscription = Subscription::create([
+            'customer_id' => $payment->customer_id,
+            'package_id' => $payment->package_id,
+            'status' => 'pending',
+        ]);
+
+        Log::info('Subscription created from Hubtel payment', [
+            'subscription_id' => $subscription->id,
+            'payment_id' => $payment->id,
+            'customer_id' => $payment->customer_id,
+        ]);
+
+        return $subscription;
     }
 
     /**

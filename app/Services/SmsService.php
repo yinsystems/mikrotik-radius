@@ -258,10 +258,18 @@ class SmsService
         if (str_starts_with($phone, '0')) {
             $phone = $this->defaultCountryCode . substr($phone, 1);
         }
+        // If it doesn't start with + and doesn't already have the country code
+        elseif (!str_starts_with($phone, '+')) {
+            // Extract just the numeric part of country code (e.g., "233" from "+233")
+            $countryCodeNumeric = ltrim($this->defaultCountryCode, '+');
 
-        // If it doesn't start with +, add default country code
-        if (!str_starts_with($phone, '+')) {
-            $phone = $this->defaultCountryCode . $phone;
+            // Only add country code if phone doesn't already start with it
+            if (!str_starts_with($phone, $countryCodeNumeric)) {
+                $phone = $this->defaultCountryCode . $phone;
+            } else {
+                // Already has country code, just add the + if needed
+                $phone = '+' . $phone;
+            }
         }
 
         return $phone;
@@ -368,7 +376,7 @@ class SmsService
     {
         $clientId = config('sms.hubtel.api_client_id');
         $clientSecret = config('sms.hubtel.api_client_secret');
-        
+
         if (empty($clientId) || empty($clientSecret)) {
             return [
                 'success' => false,
@@ -380,10 +388,10 @@ class SmsService
         try {
             $apiUrl = config('sms.hubtel.api_url');
             $timeout = config('sms.hubtel.timeout', 30);
-            
+
             // Test with account balance endpoint (adjust URL as needed)
             $balanceUrl = str_replace('/messages/send', '/account/balance', $apiUrl);
-            
+
             $response = Http::timeout($timeout)
                 ->withBasicAuth($clientId, $clientSecret)
                 ->get($balanceUrl);
