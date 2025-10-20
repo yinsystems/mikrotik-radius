@@ -50,14 +50,12 @@ class PaymentSuccessState extends State
         // Set success message for the user
 
         $this->menu
-            ->line('Payment Status')
+            ->line('Checkout')
             ->lineBreak()
             ->line('Package: ' . $packageName)
-            ->line('Please approve the mobile')
-            ->line('money request on your phone')
+            ->line('Please approve the prompt')
             ->line("WIFI Token would be sent via SMS after payment")
-            ->lineBreak()
-            ->line('0) Back to Main Menu');
+            ->line("Or Redial Code Goto Option (3)");
 
         Log::info('WiFi USSD Payment Success', [
             'session_id' => $sessionId,

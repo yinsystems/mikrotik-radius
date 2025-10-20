@@ -10,15 +10,15 @@ class TrialTokenState extends State
     {
         $token = $this->record->get('trial_token');
         $duration = $this->record->get('trial_duration');
-        
+
         $this->menu
             ->line('Free Trial Token!')
             ->lineBreak()
             ->line('Your ' . $duration . ' Token: ' . $token)
             ->lineBreak()
             ->line('SMS sent with details.')
-            ->line('Connect to: WiFi-Portal')
-            ->line('Login at: wifi.portal.com')
+            ->line('Connect to: JayNet WIFI')
+            ->line('Login at: jaynet.local.com')
             ->lineBreak()
             ->text('Enjoy your free internet!');
     }
