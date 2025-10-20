@@ -423,12 +423,14 @@ class HubtelWebhookController extends Controller
                 'package_name' => $subscription->package->name,
                 'expires_at' => $subscription->expires_at->format('Y-m-d H:i:s'),
                 'username' => $subscription->username,
+                'token' => $subscription->customer->internet_token,
             ]);
 
             Log::info('Hubtel subscription activation notification sent', [
                 'subscription_id' => $subscription->id,
                 'customer_id' => $subscription->customer_id,
                 'package_name' => $subscription->package->name,
+                'token' => $subscription->customer->internet_token,
             ]);
         } catch (Exception $e) {
             Log::error('Failed to send Hubtel subscription activation notification', [

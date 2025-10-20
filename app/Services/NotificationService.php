@@ -122,6 +122,9 @@ class NotificationService
      */
     public function sendTrialAssignment(array $customer, array $package): array
     {
+        // Humanize the expiration date/time
+        $expiresAtHuman = $this->humanizeDateTime($package['expires_at']);
+        
         return $this->send('trial_assignment', [
             'name' => $customer['name'],
             'email' => $customer['email'] ?? null,
@@ -130,6 +133,7 @@ class NotificationService
             'customer_name' => $customer['name'],
             'package_name' => $package['name'],
             'expires_at' => $package['expires_at'],
+            'expires_at_human' => $expiresAtHuman,
         ]);
     }
 
@@ -155,16 +159,24 @@ class NotificationService
      */
     public function sendPaymentSuccess(array $customer, array $payment): array
     {
-        return $this->send('payment_success', [
-            'name' => $customer['name'],
-            'email' => $customer['email'] ?? null,
-            'phone' => $customer['phone'] ?? null,
-        ], [
+        $paymentTime = isset($payment['created_at']) ? $this->humanizeDateTime($payment['created_at']) : null;
+        
+        $variables = [
             'customer_name' => $customer['name'],
             'amount' => $payment['amount'],
             'currency' => $payment['currency'],
             'transaction_id' => $payment['transaction_id'],
-        ]);
+        ];
+
+        if ($paymentTime) {
+            $variables['payment_time'] = $paymentTime;
+        }
+
+        return $this->send('payment_success', [
+            'name' => $customer['name'],
+            'email' => $customer['email'] ?? null,
+            'phone' => $customer['phone'] ?? null,
+        ], $variables);
     }
 
     /**
@@ -172,14 +184,19 @@ class NotificationService
      */
     public function sendSubscriptionActivated(array $customer, array $subscription): array
     {
+        // Humanize the expiration date/time
+        $expiresAtHuman = $this->humanizeDateTime($subscription['expires_at']);
+        
         return $this->send('subscription_activated', [
             'name' => $customer['name'],
             'email' => $customer['email'] ?? null,
             'phone' => $customer['phone'] ?? null,
         ], [
+            'token' => $customer['internet_token'] ?? null,
             'customer_name' => $customer['name'],
             'package_name' => $subscription['package_name'],
             'expires_at' => $subscription['expires_at'],
+            'expires_at_human' => $expiresAtHuman,
             'username' => $subscription['username'],
         ]);
     }
@@ -195,6 +212,9 @@ class NotificationService
 
         // Determine the appropriate time display based on duration type and remaining time
         $timeDisplay = $this->formatTimeRemaining($durationType, $hoursRemaining, $minutesRemaining);
+        
+        // Humanize the expiration date/time
+        $expiresAtHuman = $this->humanizeDateTime($subscription['expires_at']);
 
         return $this->send('expiration_warning', [
             'name' => $customer['name'],
@@ -204,6 +224,7 @@ class NotificationService
             'customer_name' => $customer['name'],
             'package_name' => $subscription['package_name'],
             'expires_at' => $subscription['expires_at'],
+            'expires_at_human' => $expiresAtHuman,
             'hours_remaining' => $hoursRemaining,
             'minutes_remaining' => $minutesRemaining,
             'time_remaining_display' => $timeDisplay,
@@ -212,28 +233,103 @@ class NotificationService
     }
 
     /**
-     * Format time remaining display based on duration type
+     * Format time remaining display based on duration type with improved humanization
      */
     protected function formatTimeRemaining(string $durationType, int $hoursRemaining, int $minutesRemaining): string
     {
-        // For minute packages, always show minutes if less than 2 hours
-        if ($durationType === 'minutely' || ($minutesRemaining > 0 && $minutesRemaining < 120)) {
-            if ($minutesRemaining <= 0) {
-                return 'less than 1 minute';
-            } elseif ($minutesRemaining == 1) {
-                return '1 minute';
-            } else {
+        // Handle expired or immediate expiration
+        if ($minutesRemaining <= 0) {
+            return 'expired';
+        }
+
+        // For very short durations (less than 2 minutes), be precise
+        if ($minutesRemaining < 2) {
+            return $minutesRemaining == 1 ? '1 minute' : 'less than 1 minute';
+        }
+
+        // For minute-based packages or short durations (less than 2 hours)
+        if ($durationType === 'minutely' || $minutesRemaining < 120) {
+            if ($minutesRemaining < 60) {
                 return $minutesRemaining . ' minutes';
+            } else {
+                // Show hours and minutes for clarity
+                $hours = intval($minutesRemaining / 60);
+                $mins = $minutesRemaining % 60;
+                
+                if ($mins == 0) {
+                    return $hours == 1 ? '1 hour' : $hours . ' hours';
+                } else {
+                    return $hours . ' hour' . ($hours > 1 ? 's' : '') . ' and ' . $mins . ' minute' . ($mins > 1 ? 's' : '');
+                }
             }
         }
 
-        // For longer durations, show hours
+        // For longer durations, show in days/hours format
+        if ($hoursRemaining >= 24) {
+            $days = intval($hoursRemaining / 24);
+            $remainingHours = $hoursRemaining % 24;
+            
+            if ($remainingHours == 0) {
+                return $days == 1 ? '1 day' : $days . ' days';
+            } else {
+                return $days . ' day' . ($days > 1 ? 's' : '') . ' and ' . $remainingHours . ' hour' . ($remainingHours > 1 ? 's' : '');
+            }
+        }
+
+        // For hour-based durations
         if ($hoursRemaining <= 0) {
             return 'less than 1 hour';
         } elseif ($hoursRemaining == 1) {
             return '1 hour';
         } else {
             return $hoursRemaining . ' hours';
+        }
+    }
+
+    /**
+     * Humanize date/time strings for better readability
+     */
+    protected function humanizeDateTime($dateTime): string
+    {
+        if (empty($dateTime)) {
+            return 'Unknown';
+        }
+
+        try {
+            $date = \Carbon\Carbon::parse($dateTime);
+            $now = \Carbon\Carbon::now();
+            
+            // If it's today, show time with "today"
+            if ($date->isToday()) {
+                return 'today at ' . $date->format('g:i A');
+            }
+            
+            // If it's tomorrow, show "tomorrow"
+            if ($date->isTomorrow()) {
+                return 'tomorrow at ' . $date->format('g:i A');
+            }
+            
+            // If it's yesterday, show "yesterday"
+            if ($date->isYesterday()) {
+                return 'yesterday at ' . $date->format('g:i A');
+            }
+            
+            // If it's within this week, show day name
+            if ($date->isCurrentWeek()) {
+                return $date->format('l \a\t g:i A'); // e.g., "Monday at 3:30 PM"
+            }
+            
+            // If it's within this year, show month and day
+            if ($date->isCurrentYear()) {
+                return $date->format('M j \a\t g:i A'); // e.g., "Oct 25 at 3:30 PM"
+            }
+            
+            // For dates in other years, show full date
+            return $date->format('M j, Y \a\t g:i A'); // e.g., "Oct 25, 2024 at 3:30 PM"
+            
+        } catch (\Exception $e) {
+            // Fallback to original string if parsing fails
+            return $dateTime;
         }
     }
 
@@ -368,9 +464,24 @@ class NotificationService
      */
     protected function replacePlaceholders(string $template, array $data): string
     {
+        // Handle conditional variables first (e.g., {payment_time?Payment processed {payment_time}.})
+        $template = preg_replace_callback('/\{(\w+)\?([^}]*)\}/', function($matches) use ($data) {
+            $variable = $matches[1];
+            $conditionalText = $matches[2];
+            
+            if (isset($data[$variable]) && !empty($data[$variable])) {
+                // Replace the variable within the conditional text
+                return str_replace('{' . $variable . '}', $data[$variable], $conditionalText);
+            }
+            
+            return ''; // Remove the entire conditional block if variable is empty
+        }, $template);
+        
+        // Handle regular variables
         foreach ($data as $key => $value) {
             $template = str_replace('{' . $key . '}', $value, $template);
         }
+        
         return $template;
     }
 

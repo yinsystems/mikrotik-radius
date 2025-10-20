@@ -540,6 +540,7 @@ class ReddeCallbackController extends Controller
                 'email' => $subscription->customer->email,
                 'phone' => $subscription->customer->phone,
             ], [
+                'token' => $subscription->customer->internet_token ?? null,
                 'package_name' => $subscription->package->name,
                 'expires_at' => $subscription->expires_at->format('Y-m-d H:i:s'),
                 'username' => $subscription->username,
@@ -547,6 +548,7 @@ class ReddeCallbackController extends Controller
 
             Log::info('Subscription activation notification sent', [
                 'subscription_id' => $subscription->id,
+                'token' => $subscription->customer->internet_token ?? null,
                 'customer_id' => $subscription->customer_id,
                 'package_name' => $subscription->package->name,
             ]);
