@@ -1,5 +1,6 @@
 <?php
 
+use App\Http\Controllers\Api\HubtelWebhookController;
 use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\CaptivePortalController;
 use App\Http\Controllers\WifiUssdController;
@@ -62,5 +63,10 @@ Route::group(['prefix' => 'portal', 'as' => 'portal.'], function () {
     });
 });
 
-// Redde payment callback (outside portal group as it's called by Redde)
-//Route::post('/api/redde/callback/receive', [CaptivePortalController::class, 'handlePaymentCallback'])->name('redde.callback');
+/*
+|--------------------------------------------------------------------------
+| Hubtel Webhook Routes (No authentication required)
+|--------------------------------------------------------------------------
+*/
+Route::post('/service-fulfillment', HubtelWebhookController::class);
+

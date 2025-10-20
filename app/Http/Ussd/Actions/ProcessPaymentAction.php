@@ -20,7 +20,7 @@ class ProcessPaymentAction extends Action
 
         try {
             // Generate unique transaction reference
-            $reference = $this->generateTransactionId();
+            $reference =  request('SessionId') ?? $this->generateTransactionId();
 
             // Create subscription for customer
             $subscription = $customer->createSubscription($packageId);

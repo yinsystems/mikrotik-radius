@@ -6,7 +6,6 @@ use App\Http\Ussd\Actions\HelpAction;
 use App\Http\Ussd\Actions\SelectPackageAction;
 use App\Http\Ussd\Actions\GenerateTrialTokenAction;
 use App\Http\Ussd\Actions\CheckActiveTokenAction;
-use App\Http\Ussd\States\HelpState;
 use App\Models\Package;
 use Sparors\Ussd\State;
 
