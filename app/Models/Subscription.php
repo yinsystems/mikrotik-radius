@@ -382,7 +382,13 @@ class Subscription extends Model
     
     public function updateDataUsageFromRadius()
     {
-        $totalUsage = RadAcct::getTotalUsage($this->username);
+        // Only count usage from current subscription start date
+        $totalUsage = RadAcct::getTotalUsage(
+            $this->username, 
+            $this->starts_at,  // Only count from subscription start
+            null
+        );
+        
         $this->update(['data_used' => $totalUsage]);
         
         // Check if data limit exceeded
@@ -508,12 +514,15 @@ class Subscription extends Model
     {
         $package = $newPackage ?? $this->package;
         
-        // Calculate new expiration
-        $newExpiration = $this->calculateExpiration($package, $this->expires_at);
+        // Calculate new expiration from now for package changes
+        $startTime = $newPackage ? now() : $this->expires_at;
+        $newExpiration = $this->calculateExpiration($package, $startTime);
         
         $this->update([
             'package_id' => $package->id,
             'expires_at' => $newExpiration,
+            'starts_at' => $newPackage ? now() : $this->starts_at, // Reset start time for new packages
+            'data_used' => $newPackage ? 0 : $this->data_used, // Reset data usage for new packages
             'status' => 'active'
         ]);
         
@@ -715,6 +724,9 @@ class Subscription extends Model
         $expiredCount = 0;
         foreach ($expiredSubscriptions as $subscription) {
             try {
+                // Update data usage from RADIUS before expiring
+                $subscription->updateDataUsageFromRadius();
+                
                 // Disconnect all active sessions
                 $subscription->disconnectAllSessions('Subscription Expired');
                 

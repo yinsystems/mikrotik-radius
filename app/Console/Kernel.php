@@ -18,11 +18,8 @@ class Kernel extends ConsoleKernel
                  ->withoutOverlapping()
                  ->runInBackground();
 
-        // Sync data usage every minute
-        $schedule->command('usage:sync --check-limits')
-                 ->everyMinute()
-                 ->withoutOverlapping()
-                 ->runInBackground();
+        // Data usage tracking is handled automatically by Subscription model on interim updates
+        // No need for separate sync command
     }
 
     /**

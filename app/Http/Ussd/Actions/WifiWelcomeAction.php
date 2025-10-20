@@ -13,7 +13,7 @@ class WifiWelcomeAction extends Action
 {
     public function run(): string
     {
-        $msisdn = request('MSISDN');
+        $msisdn = request('Mobile');
 
         // Get or create customer
         $customer = Customer::firstOrCreate(

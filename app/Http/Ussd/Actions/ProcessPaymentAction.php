@@ -4,19 +4,12 @@ namespace App\Http\Ussd\Actions;
 
 use App\Http\Ussd\States\PaymentSuccessState;
 use App\Http\Ussd\States\PaymentFailedState;
-use App\Http\Ussd\States\PaymentProcessingState;
-use App\Models\Customer;
 use App\Models\Package;
 use App\Models\Payment;
-use App\Services\ReddePaymentService;
 use Sparors\Ussd\Action;
 
 class ProcessPaymentAction extends Action
 {
-    protected ReddePaymentService $reddeService;
-    public function __construct() {
-        $this->reddeService = new ReddePaymentService();
-    }
 
     public function run(): string
     {
@@ -28,7 +21,7 @@ class ProcessPaymentAction extends Action
         try {
             // Generate unique transaction reference
             $reference = $this->generateTransactionId();
-            
+
             // Create subscription for customer
             $subscription = $customer->createSubscription($packageId);
 
@@ -58,48 +51,46 @@ class ProcessPaymentAction extends Action
                 'client_transaction_id' => $payment->transaction_id,
             ];
 
-            // Process payment through Redde
-            $result = $this->reddeService->createSubscriptionPayment($paymentData);
+            // Keep payment as pending - service fulfillment will complete it
 
-            if ($result['success']) {
-                // Update payment status to processing 
-                $payment->update([
-                    'status' => 'processing',
-                    'external_reference' => $result['transaction_id'] ?? null,
-                    'webhook_data' => $result['response'] ?? []
-                ]);
+            // Prepare cart data for AddToCart response
+            $cart = [
+                'item_name' => "WiFi Package: {$package->name}",
+                'quantity' => 1,
+                'price' => number_format((float)$package->price, 1, '.', ''),
+                'total' => number_format((float)$package->price, 1, '.', '')
+            ];
 
-                // Store payment info in record for status checking
-                $this->record->setMultiple([
-                    'payment_id' => $payment->id,
-                    'transaction_id' => $payment->transaction_id,
-                    'external_reference' => $result['transaction_id'] ?? null,
-                    'subscription_id' => $subscription->id,
-                    'package_name' => $package->name,
-                    'payment_status' => 'processing'
-                ]);
+            // Prepare order data
+            $order = (object)[
+                'id' => $payment->id,
+                'reference' => $payment->transaction_id,
+                'amount' => $package->price,
+                'package' => $package->name
+            ];
 
-                \Log::info("USSD Payment Initiated", [
-                    'customer_id' => $customer->id,
-                    'payment_id' => $payment->id,
-                    'transaction_id' => $payment->transaction_id,
-                    'external_reference' => $result['transaction_id'] ?? null,
-                    'phone' => $phoneNumber,
-                    'amount' => $package->price,
-                    'package' => $package->name
-                ]);
-
-                return PaymentProcessingState::class;
-            }
-
-            // Payment initiation failed
-            $payment->update([
-                'status' => 'failed',
-                'failure_reason' => $result['error'] ?? 'Payment initiation failed'
+            // Store data in record for success state
+            $this->record->setMultiple([
+                'payment_id' => $payment->id,
+                'transaction_id' => $payment->transaction_id,
+                'subscription_id' => $subscription->id,
+                'package_name' => $package->name,
+                'payment_status' => 'pending',
+                'cart' => $cart,
+                'order' => $order
             ]);
 
-            $this->record->set('error', $result['error'] ?? 'Payment processing failed');
-            return PaymentFailedState::class;
+            \Log::info("WiFi USSD Payment Created (Pending - Service Fulfillment)", [
+                'customer_id' => $customer->id,
+                'payment_id' => $payment->id,
+                'subscription_id' => $subscription->id,
+                'transaction_id' => $payment->transaction_id,
+                'phone' => $phoneNumber,
+                'amount' => $package->price,
+                'package' => $package->name
+            ]);
+
+            return PaymentSuccessState::class;
 
         } catch (\Exception $e) {
             \Log::error('USSD Payment Error: ' . $e->getMessage());
