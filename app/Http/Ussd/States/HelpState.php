@@ -2,6 +2,7 @@
 
 namespace App\Http\Ussd\States;
 
+use App\Http\Ussd\Actions\HelpAction;
 use App\Http\Ussd\Actions\WifiWelcomeAction;
 use Sparors\Ussd\State;
 
@@ -11,8 +12,9 @@ class HelpState extends State
     {
         $this->menu
             ->line('WiFi Connection Steps:')
-            ->line('1) Connect to JayNet WiFi')
+            ->line('1) Connect to any JayNet WiFi')
             ->line('2) Open browser')
+            ->line('3) Goto http://wifi.jaynet.org')
             ->line('3) Enter your phone number and 6-digit token')
             ->line('4) Start browsing')
             ->line('Support: 0123456789')
@@ -24,7 +26,7 @@ class HelpState extends State
     {
         $this->decision->equal('1', WifiWelcomeAction::class);
         $this->decision->equal('0', WifiWelcomeAction::class);
-        $this->decision->any( HelpState::class);
+        $this->decision->any( HelpAction::class);
         // Option 0 or any other input ends the session
     }
 }
