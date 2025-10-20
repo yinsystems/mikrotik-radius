@@ -99,7 +99,13 @@ class Subscription extends Model
 
     public function getPasswordAttribute()
     {
-        return $this->customer->password;
+        // Ensure customer has an internet token for WiFi authentication
+        if (!$this->customer->internet_token) {
+            $this->customer->generateInternetToken();
+        }
+        
+        // Use internet_token for WiFi authentication
+        return $this->customer->internet_token;
     }
 
     public function isExpired()
@@ -232,8 +238,13 @@ class Subscription extends Model
     // RADIUS Integration Methods
     public function createRadiusUser()
     {
-        // Create authentication entry
-        RadCheck::setPassword($this->username, $this->password);
+        // Ensure customer has internet token for WiFi authentication
+        if (!$this->customer->internet_token) {
+            $this->customer->generateInternetToken();
+        }
+        
+        // Create authentication entry with internet token
+        RadCheck::setPassword($this->username, $this->password); // This now uses internet_token
         
         // Set Session-Timeout for time-based packages (individual user level)
         if ($this->package->isTimeBased()) {
@@ -249,7 +260,7 @@ class Subscription extends Model
             RadReply::setDataLimit($this->username, $this->package->data_limit * 1024 * 1024);
         }
         
-        // Set Session-Timeout based on package duration type
+        // Set Session-Timeout based on package duration type (avoid duplicate)
         if ($this->package->isTimeBased()) {
             $this->setUserSessionTimeout();
         }
