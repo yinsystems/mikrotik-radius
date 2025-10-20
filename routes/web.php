@@ -68,5 +68,5 @@ Route::group(['prefix' => 'portal', 'as' => 'portal.'], function () {
 | Hubtel Webhook Routes (No authentication required)
 |--------------------------------------------------------------------------
 */
-Route::post('/service-fulfillment', HubtelWebhookController::class);
+Route::post('/hubtel-service-fulfillment', HubtelWebhookController::class);
 
