@@ -5,12 +5,15 @@ namespace App\Http\Controllers\Api;
 use App\Http\Controllers\Controller;
 use App\Models\Payment;
 use App\Models\Customer;
+use App\Models\Subscription;
+use App\Models\Package;
 use Exception;
 use Illuminate\Http\Request;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Http;
+use Carbon\Carbon;
 
 class HubtelWebhookController extends Controller
 {
@@ -88,12 +91,12 @@ class HubtelWebhookController extends Controller
                     'status' => 'completed',
                     'external_reference' => $request->input('Data.TransactionId'),
                     'payment_date' => now(),
-                    'payment_gateway_response' => $request->all()
+                    'metadata' => $request->all()
                 ]);
 
-                // Activate subscription if exists
+                // Activate subscription if exists using same logic as ReddeCallback
                 if ($payment->subscription) {
-                    $this->activateWifiSubscription($payment->subscription, $payment);
+                    $this->handleSuccessfulPayment($payment);
                 }
 
                 DB::commit();
@@ -118,7 +121,7 @@ class HubtelWebhookController extends Controller
                     $payment->update([
                         'status' => 'failed',
                         'failure_reason' => 'Payment failed with response code: ' . $responseCode,
-                        'payment_gateway_response' => $request->all()
+                        'metadata' => $request->all()
                     ]);
 
                     // Mark subscription as failed if exists
@@ -189,10 +192,9 @@ class HubtelWebhookController extends Controller
                 throw new Exception('Customer not found');
             }
 
-            // Find the pending payment for this customer and session
-            $payment = Payment::where('customer_id', $customer->id)
+            // Find the pending payment for this session
+            $payment = Payment::where('transaction_id', $sessionId)
                 ->where('status', 'pending')
-                ->where('amount', $amountPaid)
                 ->orderBy('created_at', 'desc')
                 ->first();
 
@@ -200,26 +202,15 @@ class HubtelWebhookController extends Controller
                 throw new Exception('No matching pending payment found');
             }
 
-            // Complete the payment using existing ReddeCallback logic
+            // Update payment status to completed
             $payment->update([
                 'status' => 'completed',
-                'external_reference' => $orderId,
                 'payment_date' => now(),
-                'payment_gateway_response' => array_merge(
-                    $payment->payment_gateway_response ?? [],
-                    ['hubtel_service_fulfillment' => $orderInfo]
-                )
+                'external_reference' => $orderId,
             ]);
 
-            // Activate subscription using existing subscription methods if it exists
-            if ($payment->subscription) {
-                $subscription = $payment->subscription;
-                
-                // Use existing subscription activation logic
-                $subscription->update(['status' => 'active']);
-                $subscription->createRadiusUser(); // Use existing method
-                $subscription->syncRadiusStatus(); // Use existing method
-            }
+            // Handle successful payment using our local method
+            $this->handleSuccessfulPayment($payment);
 
             DB::commit();
 
@@ -240,7 +231,7 @@ class HubtelWebhookController extends Controller
 
         } catch (Exception $e) {
             DB::rollback();
-            
+
             Log::error('Hubtel Service Fulfillment Error', [
                 'error' => $e->getMessage(),
                 'request' => $request->all()
@@ -259,6 +250,157 @@ class HubtelWebhookController extends Controller
     }
 
 
+
+
+
+    /**
+     * Handle successful payment - copied from ReddeCallbackController logic
+     */
+    private function handleSuccessfulPayment(Payment $payment): void
+    {
+        Log::info('Processing successful Hubtel payment', [
+            'payment_id' => $payment->id,
+            'customer_id' => $payment->customer_id,
+            'subscription_id' => $payment->subscription_id,
+        ]);
+
+        // If this payment is for a subscription, activate it
+        if ($payment->subscription_id && $payment->subscription) {
+            $this->activateSubscription($payment->subscription, $payment);
+        }
+
+
+        // Send payment confirmation notification
+        $this->sendPaymentConfirmation($payment);
+    }
+
+    /**
+     * Activate subscription - copied from ReddeCallbackController logic
+     */
+    private function activateSubscription(Subscription $subscription, Payment $payment): void
+    {
+        // Calculate subscription dates based on package
+        $package = $subscription->package ?? $payment->package;
+
+        if (!$package) {
+            Log::warning('No package found for subscription activation', [
+                'subscription_id' => $subscription->id,
+                'payment_id' => $payment->id,
+            ]);
+            return;
+        }
+
+        $startDate = now();
+        $endDate = $this->calculateSubscriptionEndDate($startDate, $package);
+
+        $subscription->update([
+            'status' => 'active',
+            'starts_at' => $startDate,
+            'expires_at' => $endDate,
+            'data_used' => 0,
+            'notes' => ($subscription->notes ? $subscription->notes . "\n" : '') .
+                "Activated via Hubtel payment #{$payment->id} on " . now()->format('Y-m-d H:i:s'),
+        ]);
+
+        Log::info('Subscription activated via Hubtel', [
+            'subscription_id' => $subscription->id,
+            'package_name' => $package->name,
+            'starts_at' => $startDate->toISOString(),
+            'expires_at' => $endDate->toISOString(),
+        ]);
+
+        // Note: RADIUS user account creation and syncing is handled automatically by SubscriptionEventListener
+        // when the subscription is updated above
+
+        // Send subscription activation notification
+        $this->sendSubscriptionActivationNotification($subscription, $payment);
+    }
+
+    /**
+     * Calculate subscription end date - copied from ReddeCallbackController logic
+     */
+    private function calculateSubscriptionEndDate(Carbon $startDate, Package $package): Carbon
+    {
+        return match($package->duration_type) {
+            'minutely' => $startDate->copy()->addMinutes($package->duration_value),
+            'hourly' => $startDate->copy()->addHours($package->duration_value),
+            'daily' => $startDate->copy()->addDays($package->duration_value),
+            'weekly' => $startDate->copy()->addWeeks($package->duration_value),
+            'monthly' => $startDate->copy()->addMonths($package->duration_value),
+            'trial' => $startDate->copy()->addHours($package->trial_duration_hours ?? 1),
+            default => $startDate->copy()->addDays(1)
+        };
+    }
+
+
+
+    /**
+     * Send payment confirmation - copied from ReddeCallbackController logic
+     */
+    private function sendPaymentConfirmation(Payment $payment): void
+    {
+        try {
+            if (!$payment->customer) {
+                return;
+            }
+
+            $notificationService = app(\App\Services\NotificationService::class);
+            $notificationService->sendPaymentSuccess([
+                'name' => $payment->customer->name,
+                'email' => $payment->customer->email,
+                'phone' => $payment->customer->phone,
+            ], [
+                'amount' => $payment->amount,
+                'currency' => $payment->currency,
+                'transaction_id' => $payment->external_reference ?: $payment->transaction_id,
+            ]);
+
+            Log::info('Hubtel payment confirmation notification sent', [
+                'payment_id' => $payment->id,
+                'customer_id' => $payment->customer_id,
+                'amount' => $payment->amount,
+            ]);
+        } catch (Exception $e) {
+            Log::error('Failed to send Hubtel payment confirmation', [
+                'payment_id' => $payment->id,
+                'error' => $e->getMessage(),
+            ]);
+        }
+    }
+
+    /**
+     * Send subscription activation notification - copied from ReddeCallbackController logic
+     */
+    private function sendSubscriptionActivationNotification(Subscription $subscription, Payment $payment): void
+    {
+        try {
+            if (!$subscription->customer || !$subscription->package) {
+                return;
+            }
+
+            $notificationService = app(\App\Services\NotificationService::class);
+            $notificationService->sendSubscriptionActivated([
+                'name' => $subscription->customer->name,
+                'email' => $subscription->customer->email,
+                'phone' => $subscription->customer->phone,
+            ], [
+                'package_name' => $subscription->package->name,
+                'expires_at' => $subscription->expires_at->format('Y-m-d H:i:s'),
+                'username' => $subscription->username,
+            ]);
+
+            Log::info('Hubtel subscription activation notification sent', [
+                'subscription_id' => $subscription->id,
+                'customer_id' => $subscription->customer_id,
+                'package_name' => $subscription->package->name,
+            ]);
+        } catch (Exception $e) {
+            Log::error('Failed to send Hubtel subscription activation notification', [
+                'subscription_id' => $subscription->id,
+                'error' => $e->getMessage(),
+            ]);
+        }
+    }
 
     /**
      * Send fulfillment callback to Hubtel
