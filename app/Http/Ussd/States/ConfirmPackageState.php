@@ -15,16 +15,16 @@ class ConfirmPackageState extends State
         $packageDuration = $this->record->get('selected_package_duration');
         $packageData = $this->record->get('selected_package_data');
         $packageUsers = $this->record->get('selected_package_users');
-        
+
         // Format price with appropriate decimal places
-        $priceDisplay = $packagePrice == floor($packagePrice) ? 
-            number_format($packagePrice, 0) : 
+        $priceDisplay = $packagePrice == floor($packagePrice) ?
+            number_format($packagePrice, 0) :
             number_format($packagePrice, 2);
-        
+
         $this->menu
             ->line('Confirm Purchase:')
             ->line($packageName)
-            ->line('GH¢' . $priceDisplay . ' | ' . $packageData . ' | ' . $packageDuration)
+            ->line('GHS' . $priceDisplay . ' | ' . $packageData . ' | ' . $packageDuration)
             ->line($packageUsers . ' users max')
             ->lineBreak()
             ->line('1) Confirm & Pay')
