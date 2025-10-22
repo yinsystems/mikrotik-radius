@@ -19,38 +19,41 @@ class SubscriptionEventListener
     {
         // Create RADIUS user using customer credentials
         $subscription->createRadiusUser();
-        
+
         // Sync initial status
         $subscription->syncRadiusStatus();
-        
+
         // Send setup instructions notification
-        $this->sendSetupInstructions($subscription);
+        if ($subscription->status === 'active') {
+            $this->sendSetupInstructions($subscription);
+        }
     }
 
     public function updated(Subscription $subscription)
     {
         // Check what changed
         $dirty = $subscription->getDirty();
-        
+
         // If package changed, update RADIUS group assignment
         if (isset($dirty['package_id'])) {
             $subscription->updateRadiusUser();
         }
-        
+
         // If status changed, sync RADIUS status
         if (isset($dirty['status'])) {
             $subscription->syncRadiusStatus();
         }
-        
+
         // If expiration changed, update RADIUS expiration
         if (isset($dirty['expires_at'])) {
             $subscription->updateRadiusUser();
         }
-        
+
         // If username or password changed, update RADIUS credentials
         if (isset($dirty['username']) || isset($dirty['password'])) {
             $subscription->updateRadiusUser();
         }
+
     }
 
     public function deleting(Subscription $subscription)
@@ -83,7 +86,7 @@ class SubscriptionEventListener
             ], $credentials);
 
             \Log::info("Setup instructions sent for subscription {$subscription->id}");
-            
+
         } catch (\Exception $e) {
             \Log::error("Failed to send setup instructions for subscription {$subscription->id}: " . $e->getMessage());
         }
