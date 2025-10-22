@@ -235,6 +235,27 @@ class NotificationService
     }
 
     /**
+     * Send subscription expired notification (post-expiry)
+     */
+    public function sendSubscriptionExpired(array $customer, array $subscription): array
+    {
+        // Humanize the expiration date/time
+        $expiredAtHuman = $this->humanizeDateTime($subscription['expired_at'] ?? $subscription['expires_at'] ?? null);
+
+        return $this->send('subscription_expired', [
+            'name' => $customer['name'],
+            'email' => $customer['email'] ?? null,
+            'phone' => $customer['phone'] ?? null,
+        ], [
+            'customer_name' => $customer['name'],
+            'package_name' => $subscription['package_name'] ?? ($subscription['package'] ?? 'Subscription'),
+            'expired_at' => $subscription['expired_at'] ?? $subscription['expires_at'] ?? null,
+            'expired_at_human' => $expiredAtHuman,
+            'username' => $subscription['username'] ?? null,
+        ]);
+    }
+
+    /**
      * Format time remaining display based on duration type with improved humanization
      */
     protected function formatTimeRemaining(string $durationType, int $hoursRemaining, int $minutesRemaining): string

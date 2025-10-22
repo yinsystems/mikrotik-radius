@@ -54,6 +54,27 @@ class SubscriptionEventListener
             $subscription->updateRadiusUser();
         }
 
+        // If status changed to expired, notify customer post-expiry
+        if (isset($dirty['status']) && $subscription->status === 'expired') {
+            try {
+                if ($subscription->customer && $subscription->package) {
+                    $this->notificationService->sendSubscriptionExpired([
+                        'name' => $subscription->customer->name,
+                        'email' => $subscription->customer->email,
+                        'phone' => $subscription->customer->phone,
+                    ], [
+                        'package_name' => $subscription->package->name,
+                        'expires_at' => optional($subscription->expires_at)->format('Y-m-d H:i:s'),
+                        'username' => $subscription->username,
+                    ]);
+
+                    \Log::info("Subscription expired notice sent for subscription {$subscription->id}");
+                }
+            } catch (\Exception $e) {
+                \Log::error("Failed to send subscription expired notice for subscription {$subscription->id}: " . $e->getMessage());
+            }
+        }
+
     }
 
     public function deleting(Subscription $subscription)

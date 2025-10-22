@@ -79,6 +79,11 @@ return [
             'email_enabled' => env('NOTIFICATION_EXPIRATION_WARNING_EMAIL', true),
             'warning_hours' => env('NOTIFICATION_EXPIRATION_WARNING_HOURS', 24), // Hours before expiry
         ],
+        'subscription_expired' => [
+            'channels' => env('NOTIFICATION_SUBSCRIPTION_EXPIRED_CHANNELS', null),
+            'sms_enabled' => env('NOTIFICATION_SUBSCRIPTION_EXPIRED_SMS', true),
+            'email_enabled' => env('NOTIFICATION_SUBSCRIPTION_EXPIRED_EMAIL', false),
+        ],
     ],
 
     /*
@@ -162,9 +167,14 @@ return [
             'email_body' => 'Your subscription has been activated successfully! Package: {package_name}, Valid until: {expires_at_human}. WiFi Connection Details - Username: {username}, WiFi Token: {token}. Enjoy your service!',
         ],
         'expiration_warning' => [
-            'sms' => 'REMINDER: Your subscription expires in {time_remaining_display}. Renew now to avoid interruption. Tap: http://jaynet.local.com/logout to renew!',
+            'sms' => 'REMINDER: Your subscription expires in {time_remaining_display}. Renew now to avoid interruption. Dial *713*3607# to renew!',
             'email_subject' => 'Subscription Expiring Soon - {package_name}',
             'email_body' => 'REMINDER: Your subscription "{package_name}" will expire in {time_remaining_display} on {expires_at_human}. Please renew your subscription to avoid service interruption.',
+        ],
+        'subscription_expired' => [
+            'sms' => 'Your subscription has expired. Package: {package_name}. Expired on {expired_at_human}. Dial *713*3607# to renew now.',
+            'email_subject' => 'Subscription Expired - {package_name}',
+            'email_body' => 'Your subscription "{package_name}" expired on {expired_at_human}. Please renew to restore your internet access. Username: {username}.',
         ],
     ],
 
