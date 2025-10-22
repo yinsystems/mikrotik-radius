@@ -6,6 +6,7 @@ use App\Http\Ussd\States\TrialTokenState;
 use App\Http\Ussd\States\TrialNotEligibleState;
 use App\Models\Customer;
 use App\Models\Package;
+use App\Services\NotificationService;
 use Sparors\Ussd\Action;
 
 class GenerateTrialTokenAction extends Action
@@ -48,7 +49,37 @@ class GenerateTrialTokenAction extends Action
                 'subscription_id' => $subscription->id
             ]);
             
-            // TODO: Send SMS with trial token details
+            // Send trial assignment notification and setup instructions via NotificationService
+            try {
+                /** @var NotificationService $notifier */
+                $notifier = app(NotificationService::class);
+
+                // 1) Notify that a free trial package has been activated (humanized expiry)
+                $notifier->sendTrialAssignment([
+                    'name' => $customer->name,
+                    'email' => $customer->email,
+                    'phone' => $customer->phone,
+                ], [
+                    'name' => $trialPackage->name,
+                    'expires_at' => optional($subscription->expires_at)->format('Y-m-d H:i:s'),
+                ]);
+
+                // 2) Send setup instructions including WiFi token so user can connect immediately
+                $notifier->sendSetupInstructions([
+                    'name' => $customer->name,
+                    'email' => $customer->email,
+                    'phone' => $customer->phone,
+                    'internet_token' => $token,
+                ], [
+                    'username' => $subscription->username,
+                    'password' => $subscription->password, // same as internet_token per model accessor
+                ]);
+            } catch (\Exception $e) {
+                \Log::warning('Failed to send trial notifications', [
+                    'customer_id' => $customer->id,
+                    'error' => $e->getMessage(),
+                ]);
+            }
             \Log::info("Trial WiFi Token Generated via USSD", [
                 'customer_id' => $customer->id,
                 'phone' => $customer->phone,
