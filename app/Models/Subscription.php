@@ -228,6 +228,7 @@ class Subscription extends Model
         return $query->where('package_id', $packageId);
     }
 
+    
     public function scopeDataLimitExceeded($query)
     {
         return $query->whereHas('package', function($q) {
@@ -826,8 +827,12 @@ class Subscription extends Model
         $notificationService = app(\App\Services\NotificationService::class);
         
         // Get active subscriptions with package info that haven't been notified yet
-        $activeSubscriptions = self::where('status', 'active')
-                                 ->where('expiry_notification_sent', false)
+                $activeSubscriptions = self::where('status', 'active')
+                                                                 ->where(function($q) {
+                                                                         // Include rows where flag is explicitly false or still null (for older records/migrations)
+                                                                         $q->where('expiry_notification_sent', false)
+                                                                             ->orWhereNull('expiry_notification_sent');
+                                                                 })
                                  ->with(['customer', 'package'])
                                  ->get();
 
@@ -870,7 +875,7 @@ class Subscription extends Model
                 $minutesRemaining = now()->diffInMinutes($subscription->expires_at, false);
                 $hoursRemaining = now()->diffInHours($subscription->expires_at, false);
                 
-                $notificationService->sendExpirationWarning([
+                $result = $notificationService->sendExpirationWarning([
                     'name' => $subscription->customer->name,
                     'email' => $subscription->customer->email,
                     'phone' => $subscription->customer->phone,
@@ -883,15 +888,23 @@ class Subscription extends Model
                     'duration_type' => $subscription->package->duration_type,
                 ]);
 
-                // Mark notification as sent to prevent duplicates
-                $subscription->update([
-                    'expiry_notification_sent' => true,
-                    'expiry_warning_sent_at' => now()
-                ]);
+                if (!empty($result['success'])) {
+                    // Mark notification as sent to prevent duplicates
+                    $subscription->update([
+                        'expiry_notification_sent' => true,
+                        'expiry_warning_sent_at' => now()
+                    ]);
 
-                $notificationsSent++;
-                
-                \Log::info("Expiration warning sent for subscription {$subscription->id} ({$subscription->package->duration_type} package, {$timeRemaining} remaining)");
+                    $notificationsSent++;
+                    \Log::info("Expiration warning sent for subscription {$subscription->id} ({$subscription->package->duration_type} package, {$timeRemaining} remaining)");
+                } else {
+                    // Do not mark as sent; allow retry on next scheduler run
+                    \Log::warning('Expiration warning NOT sent; will retry', [
+                        'subscription_id' => $subscription->id,
+                        'customer_id' => $subscription->customer_id,
+                        'reason' => $result['message'] ?? 'Unknown',
+                    ]);
+                }
             } catch (\Exception $e) {
                 \Log::error("Failed to send expiration warning for subscription {$subscription->id}: " . $e->getMessage());
             }

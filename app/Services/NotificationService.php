@@ -380,6 +380,30 @@ class NotificationService
         // Check type-specific settings
         $typeConfig = $this->config['types'][$type] ?? [];
 
+        // Honor explicit per-type channel override if provided (e.g., 'sms', 'email', or 'both')
+        if (!empty($typeConfig['channels'])) {
+            $channelsSetting = $typeConfig['channels'];
+            if (is_string($channelsSetting)) {
+                switch (strtolower($channelsSetting)) {
+                    case 'sms':
+                        return $this->smsEnabled ? ['sms'] : [];
+                    case 'email':
+                        return $this->emailEnabled ? ['email'] : [];
+                    case 'both':
+                    default:
+                        return array_filter([
+                            $this->smsEnabled ? 'sms' : null,
+                            $this->emailEnabled ? 'email' : null,
+                        ]);
+                }
+            } elseif (is_array($channelsSetting)) {
+                return array_values(array_intersect($channelsSetting, array_filter([
+                    $this->smsEnabled ? 'sms' : null,
+                    $this->emailEnabled ? 'email' : null,
+                ])));
+            }
+        }
+
         $channels = [];
 
         // Check if SMS is enabled for this type
