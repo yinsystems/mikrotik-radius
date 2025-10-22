@@ -35,8 +35,8 @@ class SelectPackageState extends State
                 // Format data limit
                 $dataLimit = $package->data_limit ?
                     ($package->data_limit >= 1024 ?
-                        number_format($package->data_limit / 1024, 1) . 'GB' :
-                        $package->data_limit . 'MB') :
+                        number_format($package->data_limit / 1024, 1) . ' GB' :
+                        $package->data_limit . ' MB') :
                     'Unlimited';
 
                 // Format price with appropriate decimal places
@@ -44,7 +44,7 @@ class SelectPackageState extends State
                     number_format($package->price, 0) :
                     number_format($package->price, 2);
 
-                $this->menu->line(sprintf('%d) %s - GHS%s',
+                $this->menu->line(sprintf('%d) %s - GHS %s',
                     $index + 1,
                     $package->name,
                     $priceDisplay
@@ -66,17 +66,17 @@ class SelectPackageState extends State
 
         if ($totalPages > 1) {
             if ($currentPage < $totalPages) {
-                $this->menu->line("{$optionNumber}) Next Page");
+                $this->menu->line("{$optionNumber}) More");
                 $optionNumber++;
             }
 
             if ($currentPage > 1) {
-                $this->menu->line("{$optionNumber}) Previous Page");
+                $this->menu->line("{$optionNumber}) Back");
                 $optionNumber++;
             }
         }
 
-        $this->menu->line('0) Back to Main Menu');
+        $this->menu->line('0) Main Menu');
     }
 
     protected function afterRendering(string $argument): void

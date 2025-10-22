@@ -14,9 +14,8 @@ class TrialTokenState extends State
         $this->menu
             ->line('Free Trial Token!')
             ->lineBreak()
-            ->line('Your ' . $duration . ' Token: ' . $token)
+            ->line('Your ' . str_replace($duration,"ly","") . ' token: ' . $token)
             ->lineBreak()
-            ->line('SMS sent with details.')
             ->line('Connect to: JayNet WIFI')
             ->line('Login at: jaynet.local.com')
             ->lineBreak()

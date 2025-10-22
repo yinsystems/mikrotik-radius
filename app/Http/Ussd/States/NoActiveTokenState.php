@@ -2,6 +2,7 @@
 
 namespace App\Http\Ussd\States;
 
+use App\Http\Ussd\Actions\HelpAction;
 use App\Http\Ussd\Actions\WifiWelcomeAction;
 use Sparors\Ussd\State;
 
@@ -19,13 +20,12 @@ class NoActiveTokenState extends State
             ->line('package or option 2 for')
             ->line('free trial.')
             ->lineBreak()
-            ->line('1) Back to Main Menu')
-            ->text('0) Exit');
+            ->line('#) Main Menu');
     }
 
     protected function afterRendering(string $argument): void
     {
-        $this->decision->equal('1', WifiWelcomeAction::class);
-        // Option 0 or any other input ends the session
+        $this->decision->equal('#', WifiWelcomeAction::class);
+        $this->decision->any( WifiWelcomeAction::class);
     }
 }
