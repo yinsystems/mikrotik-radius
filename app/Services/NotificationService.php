@@ -192,7 +192,9 @@ class NotificationService
             'email' => $customer['email'] ?? null,
             'phone' => $customer['phone'] ?? null,
         ], [
-            'token' => $customer['internet_token'] ?? null,
+            // Prefer token provided in the subscription payload (e.g., controller),
+            // fall back to customer array if present
+            'token' => $subscription['token'] ?? ($customer['internet_token'] ?? null),
             'customer_name' => $customer['name'],
             'package_name' => $subscription['package_name'],
             'expires_at' => $subscription['expires_at'],

@@ -78,6 +78,8 @@ class SubscriptionEventListener
                 'name' => $subscription->customer->name,
                 'email' => $subscription->customer->email,
                 'phone' => $subscription->customer->phone,
+                // Include the customer's internet token so templates can populate {token}
+                'internet_token' => $subscription->customer->internet_token,
             ], $credentials);
 
             \Log::info("Setup instructions sent for subscription {$subscription->id}");
