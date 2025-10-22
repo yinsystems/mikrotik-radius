@@ -17,8 +17,8 @@ class SelectPackageState extends State
         $totalPages = $this->record->get('total_pages', 1);
 
         $this->menu->line('Select Internet Package:');
-        $this->menu->line("Page {$currentPage} of {$totalPages}");
-        $this->menu->lineBreak();
+//        $this->menu->line("Page {$currentPage} of {$totalPages}");
+//        $this->menu->lineBreak();
 
         if ($packages && $packages->count() > 0) {
             foreach ($packages as $index => $package) {
@@ -49,7 +49,7 @@ class SelectPackageState extends State
                     $package->name,
                     $priceDisplay
                 ));
-                $this->menu->line(sprintf('   %s, %s, %d users',
+                $this->menu->line(sprintf('   %s, %s, %d user(s)',
                     $dataLimit,
                     $duration,
                     $package->simultaneous_users
