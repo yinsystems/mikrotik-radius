@@ -7,6 +7,7 @@ use App\Models\Payment;
 use App\Models\Customer;
 use App\Models\Subscription;
 use App\Models\Package;
+use App\Services\NotificationService;
 use Exception;
 use Illuminate\Http\Request;
 use Illuminate\Http\JsonResponse;
@@ -22,8 +23,8 @@ class HubtelWebhookController extends Controller
      * Handle the incoming request from Hubtel.
      * This handles both regular Hubtel payment callbacks and Hubtel service fulfillment requests
      *
-     * @param \Illuminate\Http\Request $request
-     * @return \Illuminate\Http\JsonResponse
+     * @param Request $request
+     * @return JsonResponse
      */
     public function __invoke(Request $request): JsonResponse
     {
@@ -250,9 +251,6 @@ class HubtelWebhookController extends Controller
     }
 
 
-
-
-
     /**
      * Handle successful payment - copied from ReddeCallbackController logic
      */
@@ -267,8 +265,7 @@ class HubtelWebhookController extends Controller
         // If this payment is for a subscription, activate it
         if ($payment->subscription_id && $payment->subscription) {
             $this->activateSubscription($payment->subscription, $payment);
-        }
-        // If this payment is for a package but no subscription exists, create one
+        } // If this payment is for a package but no subscription exists, create one
         elseif ($payment->package_id && $payment->customer_id && !$payment->subscription_id) {
             $subscription = $this->createSubscriptionFromPayment($payment);
             if ($subscription) {
@@ -357,7 +354,7 @@ class HubtelWebhookController extends Controller
      */
     private function calculateSubscriptionEndDate(Carbon $startDate, Package $package): Carbon
     {
-        return match($package->duration_type) {
+        return match ($package->duration_type) {
             'minutely' => $startDate->copy()->addMinutes($package->duration_value),
             'hourly' => $startDate->copy()->addHours($package->duration_value),
             'daily' => $startDate->copy()->addDays($package->duration_value),
@@ -367,7 +364,6 @@ class HubtelWebhookController extends Controller
             default => $startDate->copy()->addDays(1)
         };
     }
-
 
 
     /**
@@ -380,7 +376,7 @@ class HubtelWebhookController extends Controller
                 return;
             }
 
-            $notificationService = app(\App\Services\NotificationService::class);
+            $notificationService = app(NotificationService::class);
             $notificationService->sendPaymentSuccess([
                 'name' => $payment->customer->name,
                 'email' => $payment->customer->email,
@@ -414,7 +410,7 @@ class HubtelWebhookController extends Controller
                 return;
             }
 
-            $notificationService = app(\App\Services\NotificationService::class);
+            $notificationService = app(NotificationService::class);
             $notificationService->sendSubscriptionActivated([
                 'name' => $subscription->customer->name,
                 'email' => $subscription->customer->email,
@@ -446,14 +442,14 @@ class HubtelWebhookController extends Controller
     private function sendFulfillmentCallback(string $sessionId, string $orderId, string $status): void
     {
         try {
-            $callbackUrl = 'https://gs-callback.hubtel.com:9055/callback';
+            $callbackUrl = 'https://gs-callback.hubtel.com/callback';
 
             $response = Http::post($callbackUrl, [
                 'SessionId' => $sessionId,
                 'OrderId' => $orderId,
                 'ServiceStatus' => $status,
                 'MetaData' => null
-            ]);
+            ], ["port" => 9055]);
 
             Log::info('Hubtel fulfillment callback sent', [
                 'session_id' => $sessionId,
