@@ -16,7 +16,7 @@ class SelectPackageState extends State
         $currentPage = $this->record->get('packages_page', 1);
         $totalPages = $this->record->get('total_pages', 1);
 
-        $this->menu->line('Select Internet Package:');
+        $this->menu->line('Select:');
 //        $this->menu->line("Page {$currentPage} of {$totalPages}");
 //        $this->menu->lineBreak();
 
