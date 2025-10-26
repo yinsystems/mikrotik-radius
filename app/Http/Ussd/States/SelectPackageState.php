@@ -24,11 +24,11 @@ class SelectPackageState extends State
             foreach ($packages as $index => $package) {
                 // Format duration more concisely
                 $duration = match($package->duration_type) {
-                    'minutely' => $package->duration_value . ' min',
-                    'hourly' => $package->duration_value . ' hr',
-                    'daily' => $package->duration_value . ' d',
-                    'weekly' => $package->duration_value . ' wk',
-                    'monthly' => $package->duration_value . ' mo',
+                    'minutely' => $package->duration_value . 'min',
+                    'hourly' => $package->duration_value . 'hr',
+                    'daily' => $package->duration_value . 'd',
+                    'weekly' => $package->duration_value . 'wk',
+                    'monthly' => $package->duration_value . 'mo',
                     default => $package->duration_value . ' ' . $package->duration_type
                 };
 
@@ -37,7 +37,7 @@ class SelectPackageState extends State
                     ($package->data_limit >= 1024 ?
                         number_format($package->data_limit / 1024, 1) . ' GB' :
                         $package->data_limit . ' MB') :
-                    'Unlimited Data';
+                    'Unlimited';
 
                 // Format price with appropriate decimal places
                 $priceDisplay = $package->price == floor($package->price) ?
