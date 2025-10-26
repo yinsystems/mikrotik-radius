@@ -49,9 +49,9 @@ class SelectPackageState extends State
                     $package->name,
                     $priceDisplay
                 ));
-                $this->menu->line(sprintf('   %s, %s, %d user(s)',
+                $this->menu->line(sprintf('   %s, %d user(s)',
                     $dataLimit,
-                    $duration,
+//                    $duration,
                     $package->simultaneous_users
                 ));
             }
