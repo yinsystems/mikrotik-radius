@@ -162,7 +162,7 @@ return [
             'email_body' => 'Your payment has been processed successfully. Amount: {amount} {currency}, Transaction ID: {transaction_id}. {payment_time?Payment processed {payment_time}.} Thank you for your payment!',
         ],
         'subscription_activated' => [
-            'sms' => 'Subscription activated! Package: {package_name}, Valid until: {expires_at_human}. WiFi Token: {token} | Username: {username} Tap: http://jaynet.local.com/logout to access!',
+            'sms' => 'Subscription activated! Package: {package_name}, Valid until: {expires_at_human}. WiFi Token: {token} | Username: {username}. Connect to JayNet WiFi & Tap: http://jaynet.local.com/logout to access!',
             'email_subject' => 'Subscription Activated - {package_name}',
             'email_body' => 'Your subscription has been activated successfully! Package: {package_name}, Valid until: {expires_at_human}. WiFi Connection Details - Username: {username}, WiFi Token: {token}. Enjoy your service!',
         ],

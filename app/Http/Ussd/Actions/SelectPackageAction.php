@@ -13,21 +13,21 @@ class SelectPackageAction extends Action
         // Initialize pagination if not already set
         if (!$this->record->get('packages_page')) {
             $packagesPerPage = config('ussd.packages_per_page', 3);
-            
+
             // Load first page of packages
             $packages = Package::where('is_active', true)
                 ->where('is_trial', false)
                 ->orderBy('price')
                 ->take($packagesPerPage)
                 ->get();
-                
+
             // Get total count for pagination
-            $totalPackages = Package::where('is_active', true)
+            $totalPackages = Package::where('is_active', true)->orderBy('priority', 'asc')
                 ->where('is_trial', false)
                 ->count();
-                
+
             $totalPages = ceil($totalPackages / $packagesPerPage);
-            
+
             $this->record->setMultiple([
                 'packages' => $packages,
                 'packages_page' => 1,
@@ -36,7 +36,7 @@ class SelectPackageAction extends Action
                 'packages_per_page' => $packagesPerPage
             ]);
         }
-        
+
         return SelectPackageState::class;
     }
 }
