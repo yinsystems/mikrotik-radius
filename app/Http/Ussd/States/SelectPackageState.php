@@ -49,11 +49,11 @@ class SelectPackageState extends State
                     $package->name,
                     $priceDisplay
                 ));
-                $this->menu->line(sprintf('   %s, %d user(s)',
-                    $dataLimit,
+//                $this->menu->line(sprintf('   %s, %d user(s)',
+//                    $dataLimit,
 //                    $duration,
-                    $package->simultaneous_users
-                ));
+//                    $package->simultaneous_users
+//                ));
             }
         } else {
             $this->menu->line('No packages available');
