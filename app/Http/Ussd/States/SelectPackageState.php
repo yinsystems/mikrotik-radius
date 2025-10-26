@@ -37,7 +37,7 @@ class SelectPackageState extends State
                     ($package->data_limit >= 1024 ?
                         number_format($package->data_limit / 1024, 1) . ' GB' :
                         $package->data_limit . ' MB') :
-                    'Unlimited';
+                    'Unlimited Data';
 
                 // Format price with appropriate decimal places
                 $priceDisplay = $package->price == floor($package->price) ?
