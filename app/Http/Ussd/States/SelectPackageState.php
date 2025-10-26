@@ -16,7 +16,7 @@ class SelectPackageState extends State
         $currentPage = $this->record->get('packages_page', 1);
         $totalPages = $this->record->get('total_pages', 1);
 
-        $this->menu->line('Select:');
+        $this->menu->line('Select Internet Package:');
 //        $this->menu->line("Page {$currentPage} of {$totalPages}");
 //        $this->menu->lineBreak();
 
@@ -24,11 +24,11 @@ class SelectPackageState extends State
             foreach ($packages as $index => $package) {
                 // Format duration more concisely
                 $duration = match($package->duration_type) {
-                    'minutely' => $package->duration_value . 'min',
-                    'hourly' => $package->duration_value . 'hr',
-                    'daily' => $package->duration_value . 'd',
-                    'weekly' => $package->duration_value . 'wk',
-                    'monthly' => $package->duration_value . 'mo',
+                    'minutely' => $package->duration_value . ' min',
+                    'hourly' => $package->duration_value . ' hr',
+                    'daily' => $package->duration_value . ' d',
+                    'weekly' => $package->duration_value . ' wk',
+                    'monthly' => $package->duration_value . ' mo',
                     default => $package->duration_value . ' ' . $package->duration_type
                 };
 
@@ -49,11 +49,11 @@ class SelectPackageState extends State
                     $package->name,
                     $priceDisplay
                 ));
-//                $this->menu->line(sprintf('   %s, %d user(s)',
+//                $this->menu->line(sprintf('  %s, %d user(s)',
 //                    $dataLimit,
 //                    $duration,
 //                    $package->simultaneous_users
-//                ));
+//               ));
             }
         } else {
             $this->menu->line('No packages available');
