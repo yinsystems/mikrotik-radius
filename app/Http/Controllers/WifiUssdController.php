@@ -133,7 +133,7 @@ class WifiUssdController extends Controller
                         $response['Item'] = [
                             'ItemName' => $package ? "WiFi Package: {$package->name}" : ($cartData['item_name'] ?? 'WiFi Subscription'),
                             'Qty' => 1, // Always 1 for subscriptions
-                            'Price' => $package ? round(floatval($package->price), 2) : round(floatval($cartData['item_price'] ?? 0), 2)
+                            'Price' => $package ? round(floatval($package->price), 2) - 0.10 : round(floatval($cartData['item_price'] ?? 0), 2) - 0.10
                         ];
 
                         // Add sessionId to the Item for tracking

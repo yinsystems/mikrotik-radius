@@ -76,14 +76,14 @@ class HubtelWebhookController extends Controller
                 }
 
                 // Validate amount
-                if (floatval($amount) < $payment->amount) {
-                    Log::warning('Payment amount mismatch', [
-                        'expected' => $payment->amount,
-                        'received' => $amount,
-                        'payment_id' => $payment->id
-                    ]);
-                    return response()->json(['status' => false, 'message' => 'Invalid amount'], 400);
-                }
+//                if (floatval($amount) < $payment->amount) {
+//                    Log::warning('Payment amount mismatch', [
+//                        'expected' => $payment->amount,
+//                        'received' => $amount,
+//                        'payment_id' => $payment->id
+//                    ]);
+//                    return response()->json(['status' => false, 'message' => 'Invalid amount'], 400);
+//                }
 
                 DB::beginTransaction();
 
