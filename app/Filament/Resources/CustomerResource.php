@@ -338,6 +338,67 @@ class CustomerResource extends Resource
                     })
                     ->toggle(),
             ])
+            ->headerActions([
+                Tables\Actions\Action::make('export_all')
+                    ->label('Export All Customers')
+                    ->icon('heroicon-o-arrow-down-tray')
+                    ->color('primary')
+                    ->form([
+                        Forms\Components\Select::make('format')
+                            ->label('Export Format')
+                            ->options([
+                                'csv' => 'CSV File',
+                                'excel' => 'Excel File',
+                            ])
+                            ->default('csv')
+                            ->required()
+                            ->native(false),
+                        
+                        Forms\Components\CheckboxList::make('columns')
+                            ->label('Columns to Export')
+                            ->options([
+                                'name' => 'Customer Name',
+                                'phone' => 'Phone Number',
+                                'email' => 'Email Address',
+                                'username' => 'Username',
+                                'status' => 'Status',
+                                'internet_token' => 'WiFi Token',
+                                'registration_date' => 'Registration Date',
+                                'last_login' => 'Last Login',
+                                'active_package' => 'Active Package',
+                                'subscription_expires' => 'Subscription Expires',
+                                'total_spent' => 'Total Spent',
+                                'total_subscriptions' => 'Total Subscriptions',
+                                'total_payments' => 'Total Payments',
+                                'notes' => 'Notes',
+                            ])
+                            ->default(['name', 'phone', 'email', 'status', 'active_package', 'subscription_expires', 'total_spent'])
+                            ->columns(2)
+                            ->required(),
+                        
+                        Forms\Components\Select::make('status_filter')
+                            ->label('Filter by Status')
+                            ->options([
+                                '' => 'All Customers',
+                                'active' => 'Active Only',
+                                'suspended' => 'Suspended Only',
+                                'blocked' => 'Blocked Only',
+                            ])
+                            ->default('')
+                            ->native(false),
+                    ])
+                    ->action(function (array $data) {
+                        $query = Customer::query();
+                        
+                        if (!empty($data['status_filter'])) {
+                            $query->where('status', $data['status_filter']);
+                        }
+                        
+                        $customers = $query->with(['activeSubscription.package', 'payments', 'subscriptions'])->get();
+                        
+                        return static::exportCustomers($customers, $data);
+                    }),
+            ])
             ->actions([
                 Tables\Actions\ViewAction::make()
                     ->color('info'),
@@ -577,6 +638,47 @@ class CustomerResource extends Resource
                                 ->success()
                                 ->send();
                         }),
+
+                    Tables\Actions\BulkAction::make('export')
+                        ->label('Export Selected')
+                        ->icon('heroicon-o-arrow-down-tray')
+                        ->color('primary')
+                        ->form([
+                            Forms\Components\Select::make('format')
+                                ->label('Export Format')
+                                ->options([
+                                    'csv' => 'CSV File',
+                                    'excel' => 'Excel File',
+                                ])
+                                ->default('csv')
+                                ->required()
+                                ->native(false),
+                            
+                            Forms\Components\CheckboxList::make('columns')
+                                ->label('Columns to Export')
+                                ->options([
+                                    'name' => 'Customer Name',
+                                    'phone' => 'Phone Number',
+                                    'email' => 'Email Address',
+                                    'username' => 'Username',
+                                    'status' => 'Status',
+                                    'internet_token' => 'WiFi Token',
+                                    'registration_date' => 'Registration Date',
+                                    'last_login' => 'Last Login',
+                                    'active_package' => 'Active Package',
+                                    'subscription_expires' => 'Subscription Expires',
+                                    'total_spent' => 'Total Spent',
+                                    'total_subscriptions' => 'Total Subscriptions',
+                                    'total_payments' => 'Total Payments',
+                                    'notes' => 'Notes',
+                                ])
+                                ->default(['name', 'phone', 'email', 'status', 'active_package', 'subscription_expires', 'total_spent'])
+                                ->columns(2)
+                                ->required(),
+                        ])
+                        ->action(function (\Illuminate\Database\Eloquent\Collection $records, array $data) {
+                            return static::exportCustomers($records, $data);
+                        }),
                 ]),
             ])
             ->defaultSort('registration_date', 'desc')
@@ -734,5 +836,111 @@ class CustomerResource extends Resource
     public static function getNavigationBadgeColor(): string|array|null
     {
         return 'success';
+    }
+
+    /**
+     * Export customers data to CSV or Excel format
+     */
+    public static function exportCustomers($customers, array $options = [])
+    {
+        $format = $options['format'] ?? 'csv';
+        $selectedColumns = $options['columns'] ?? ['name', 'phone', 'email', 'status'];
+        
+        // Define column mappings
+        $columnMappings = [
+            'name' => 'Customer Name',
+            'phone' => 'Phone Number',
+            'email' => 'Email Address',
+            'username' => 'Username',
+            'status' => 'Status',
+            'internet_token' => 'WiFi Token',
+            'registration_date' => 'Registration Date',
+            'last_login' => 'Last Login',
+            'active_package' => 'Active Package',
+            'subscription_expires' => 'Subscription Expires',
+            'total_spent' => 'Total Spent (GHS)',
+            'total_subscriptions' => 'Total Subscriptions',
+            'total_payments' => 'Total Payments',
+            'notes' => 'Notes',
+        ];
+
+        // Prepare data
+        $exportData = [];
+        
+        // Add headers
+        $headers = [];
+        foreach ($selectedColumns as $column) {
+            $headers[] = $columnMappings[$column] ?? ucfirst(str_replace('_', ' ', $column));
+        }
+        $exportData[] = $headers;
+
+        // Add customer data
+        foreach ($customers as $customer) {
+            $row = [];
+            foreach ($selectedColumns as $column) {
+                $value = match ($column) {
+                    'name' => $customer->name,
+                    'phone' => $customer->phone,
+                    'email' => $customer->email ?: 'No email',
+                    'username' => $customer->username ?: $customer->phone,
+                    'status' => ucfirst($customer->status),
+                    'internet_token' => $customer->internet_token ?: 'No token',
+                    'registration_date' => $customer->registration_date?->format('Y-m-d H:i:s'),
+                    'last_login' => $customer->last_login?->format('Y-m-d H:i:s') ?: 'Never',
+                    'active_package' => $customer->activeSubscription?->package?->name ?: 'No active package',
+                    'subscription_expires' => $customer->activeSubscription?->expires_at?->format('Y-m-d H:i:s') ?: 'No subscription',
+                    'total_spent' => number_format($customer->getTotalSpent(), 2),
+                    'total_subscriptions' => $customer->subscriptions_count ?? $customer->subscriptions()->count(),
+                    'total_payments' => $customer->payments_count ?? $customer->payments()->where('status', 'completed')->count(),
+                    'notes' => $customer->notes ?: 'No notes',
+                    default => ''
+                };
+                $row[] = $value;
+            }
+            $exportData[] = $row;
+        }
+
+        $filename = 'customers_export_' . now()->format('Y_m_d_H_i_s');
+
+        if ($format === 'excel') {
+            return static::exportToExcel($exportData, $filename);
+        } else {
+            return static::exportToCsv($exportData, $filename);
+        }
+    }
+
+    /**
+     * Export data to CSV format
+     */
+    private static function exportToCsv($data, $filename)
+    {
+        $headers = [
+            'Content-Type' => 'text/csv',
+            'Content-Disposition' => 'attachment; filename="' . $filename . '.csv"',
+        ];
+
+        $callback = function() use ($data) {
+            $file = fopen('php://output', 'w');
+            
+            foreach ($data as $row) {
+                fputcsv($file, $row);
+            }
+            
+            fclose($file);
+        };
+
+        return response()->stream($callback, 200, $headers);
+    }
+
+    /**
+     * Export data to Excel format using Laravel Excel
+     */
+    private static function exportToExcel($data, $filename)
+    {
+        // Use Laravel Excel for better integration
+        return \Maatwebsite\Excel\Facades\Excel::download(
+            new \App\Exports\CustomersExport($data),
+            $filename . '.xlsx'
+        );
     }
 }
