@@ -56,6 +56,10 @@ class GeneralSettings extends Settings
     // Package Types
     public array $package_types;
     
+    // USSD Maintenance Settings
+    public bool $ussd_maintenance_mode;
+    public string $ussd_maintenance_message;
+    
     public static function group(): string
     {
         return 'general';
@@ -113,6 +117,10 @@ class GeneralSettings extends Settings
             
             // Package Types
             'package_types' => ['Lite Speed', 'Ultra Speed'],
+            
+            // USSD Maintenance Settings
+            'ussd_maintenance_mode' => false,
+            'ussd_maintenance_message' => 'Sorry, our service is temporarily unavailable for maintenance. Please try again later.',
         ];
     }
 }

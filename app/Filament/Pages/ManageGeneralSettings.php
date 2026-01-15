@@ -355,6 +355,29 @@ class ManageGeneralSettings extends Page
                                             ]),
                                     ]),
                             ]),
+
+                        Forms\Components\Tabs\Tab::make('USSD Maintenance')
+                            ->icon('heroicon-o-wrench-screwdriver')
+                            ->schema([
+                                Forms\Components\Section::make('USSD Maintenance Mode')
+                                    ->description('Control USSD service availability and display custom maintenance messages to users.')
+                                    ->schema([
+                                        Forms\Components\Toggle::make('ussd_maintenance_mode')
+                                            ->label('Enable Maintenance Mode')
+                                            ->helperText('When enabled, all USSD requests will show the maintenance message below.')
+                                            ->default(false)
+                                            ->live(),
+                                            
+                                        Forms\Components\Textarea::make('ussd_maintenance_message')
+                                            ->label('Maintenance Message')
+                                            ->placeholder('Sorry, our service is temporarily unavailable for maintenance. Please try again later.')
+                                            ->helperText('This message will be displayed to users when maintenance mode is enabled.')
+                                            ->required()
+                                            ->rows(4)
+                                            ->maxLength(160)
+                                            ->visible(fn (callable $get) => $get('ussd_maintenance_mode')),
+                                    ]),
+                            ]),
                     ]),
             ])
             ->statePath('data');

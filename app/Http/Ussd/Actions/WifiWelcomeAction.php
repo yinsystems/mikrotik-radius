@@ -4,8 +4,10 @@ namespace App\Http\Ussd\Actions;
 
 use App\Http\Ussd\States\WifiMainState;
 use App\Http\Ussd\States\CustomerBlockedState;
+use App\Http\Ussd\States\MaintenanceState;
 use App\Models\Customer;
 use App\Models\Package;
+use App\Settings\GeneralSettings;
 use Illuminate\Support\Str;
 use Sparors\Ussd\Action;
 
@@ -13,6 +15,13 @@ class WifiWelcomeAction extends Action
 {
     public function run(): string
     {
+        // Check for maintenance mode first
+        $settings = app(GeneralSettings::class);
+        if ($settings->ussd_maintenance_mode) {
+            $this->record->set('maintenance_message', $settings->ussd_maintenance_message);
+            return MaintenanceState::class;
+        }
+        
         $msisdn = request('Mobile');
 
         // Get or create customer
