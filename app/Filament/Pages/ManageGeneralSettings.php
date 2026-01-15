@@ -335,6 +335,26 @@ class ManageGeneralSettings extends Page
                                             ->default('d/m/Y'),
                                     ])->columns(2),
                             ]),
+
+                        Forms\Components\Tabs\Tab::make('Package Types')
+                            ->icon('heroicon-o-tag')
+                            ->schema([
+                                Forms\Components\Section::make('Package Type Management')
+                                    ->description('Define package types that can be assigned to internet packages. These help organize packages into categories.')
+                                    ->schema([
+                                        Forms\Components\TagsInput::make('package_types')
+                                            ->label('Package Types')
+                                            ->placeholder('Enter package types...')
+                                            ->helperText('Add package types such as Residential, Business, Student, Premium, etc. Press Enter after each type.')
+                                            ->required()
+                                            ->default(['Residential', 'Business', 'Student', 'Premium'])
+                                            ->splitKeys(['Enter', ','])
+                                            ->nestedRecursiveRules([
+                                                'min:2',
+                                                'max:50'
+                                            ]),
+                                    ]),
+                            ]),
                     ]),
             ])
             ->statePath('data');

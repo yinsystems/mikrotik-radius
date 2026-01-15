@@ -12,6 +12,7 @@ class Package extends Model
     protected $fillable = [
         'name',
         'description',
+        'package_type',
         'duration_type', // 'minutely', 'hourly', 'daily', 'weekly', 'monthly', 'trial'
         'duration_value', // number of minutes/hours/days/weeks/months
         'price',

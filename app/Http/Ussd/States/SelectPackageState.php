@@ -15,8 +15,14 @@ class SelectPackageState extends State
         $packages = $this->record->get('packages');
         $currentPage = $this->record->get('packages_page', 1);
         $totalPages = $this->record->get('total_pages', 1);
+        $selectedPackageType = $this->record->get('selected_package_type');
 
-        $this->menu->line('Select Internet Package:');
+        // Show header with selected package type
+        if ($selectedPackageType) {
+            $this->menu->line("Select {$selectedPackageType} Package:");
+        } else {
+            $this->menu->line('Select Internet Package:');
+        }
 //        $this->menu->line("Page {$currentPage} of {$totalPages}");
 //        $this->menu->lineBreak();
 

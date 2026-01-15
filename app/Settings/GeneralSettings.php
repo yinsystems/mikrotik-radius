@@ -53,6 +53,9 @@ class GeneralSettings extends Settings
     public bool $enable_otp_verification;
     public bool $enable_login_otp_verification;
     
+    // Package Types
+    public array $package_types;
+    
     public static function group(): string
     {
         return 'general';
@@ -107,6 +110,9 @@ class GeneralSettings extends Settings
             // Authentication Settings
             'enable_otp_verification' => true,
             'enable_login_otp_verification' => true,
+            
+            // Package Types
+            'package_types' => ['Lite Speed', 'Ultra Speed'],
         ];
     }
 }

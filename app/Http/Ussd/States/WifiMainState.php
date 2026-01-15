@@ -3,7 +3,7 @@
 namespace App\Http\Ussd\States;
 
 use App\Http\Ussd\Actions\HelpAction;
-use App\Http\Ussd\Actions\SelectPackageAction;
+use App\Http\Ussd\Actions\SelectPackageTypeAction;
 use App\Http\Ussd\Actions\GenerateTrialTokenAction;
 use App\Http\Ussd\Actions\CheckActiveTokenAction;
 use App\Models\Package;
@@ -51,7 +51,7 @@ class WifiMainState extends State
 
     protected function afterRendering(string $argument): void
     {
-        $this->decision->equal('1', SelectPackageAction::class);
+        $this->decision->equal('1', SelectPackageTypeAction::class);
         $this->decision->equal('2', GenerateTrialTokenAction::class);
         $this->decision->equal('3', CheckActiveTokenAction::class);
         $this->decision->equal('4', HelpAction::class);

@@ -4,6 +4,7 @@ namespace App\Filament\Resources;
 
 use App\Filament\Resources\PackageResource\Pages;
 use App\Models\Package;
+use App\Settings\GeneralSettings;
 use Filament\Forms;
 use Filament\Forms\Form;
 use Filament\Resources\Resource;
@@ -39,6 +40,19 @@ class PackageResource extends Resource
                                     ->placeholder('e.g., Premium WiFi, Basic Internet')
                                     ->helperText('Descriptive name for the package'),
                                 
+                                Forms\Components\Select::make('package_type')
+                                    ->options(function () {
+                                        $settings = app(GeneralSettings::class);
+                                        return array_combine($settings->package_types, $settings->package_types);
+                                    })
+                                    ->placeholder('Select package type')
+                                    ->helperText('Choose from predefined package types or leave empty')
+                                    ->searchable()
+                                    ->nullable(),
+                            ]),
+                        
+                        Forms\Components\Grid::make(2)
+                            ->schema([
                                 Forms\Components\TextInput::make('priority')
                                     ->numeric()
                                     ->default(0)
@@ -179,6 +193,12 @@ class PackageResource extends Resource
                     ->sortable()
                     ->weight('bold')
                     ->description(fn (Package $record): string => $record->description ?? ''),
+                
+                Tables\Columns\BadgeColumn::make('package_type')
+                    ->label('Type')
+                    ->color('secondary')
+                    ->placeholder('No Type')
+                    ->toggleable(),
                 
                 Tables\Columns\BadgeColumn::make('duration_display')
                     ->label('Duration')

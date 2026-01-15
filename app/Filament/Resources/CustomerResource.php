@@ -7,6 +7,7 @@ use App\Filament\Resources\CustomerResource\RelationManagers;
 use App\Models\Customer;
 use App\Models\Package;
 use App\Models\Subscription;
+use App\Services\SmsService;
 use Filament\Forms;
 use Filament\Forms\Form;
 use Filament\Resources\Resource;
@@ -636,6 +637,97 @@ class CustomerResource extends Resource
                                 ->title('RADIUS Sync Complete')
                                 ->body(count($records) . ' customers synced with RADIUS.')
                                 ->success()
+                                ->send();
+                        }),
+
+                    Tables\Actions\BulkAction::make('send_bulk_sms')
+                        ->label('Send Bulk SMS')
+                        ->icon('heroicon-o-chat-bubble-left-right')
+                        ->color('primary')
+                        ->requiresConfirmation()
+                        ->modalHeading('Send Bulk SMS')
+                        ->modalDescription(fn (\Illuminate\Database\Eloquent\Collection $records) => 
+                            'Send SMS to ' . $records->count() . ' selected customer' . ($records->count() > 1 ? 's' : '') . '.'
+                        )
+                        ->form([
+                            Forms\Components\Grid::make(2)
+                                ->schema([
+                                    Forms\Components\TextInput::make('character_count')
+                                        ->label('Character Count')
+                                        ->default('0 / 160')
+                                        ->disabled()
+                                        ->dehydrated(false),
+                                ]),
+                                
+                            Forms\Components\Textarea::make('message')
+                                ->label('SMS Message')
+                                ->required()
+                                ->maxLength(160)
+                                ->rows(4)
+                                ->placeholder('Enter your SMS message here...')
+                                ->live(onBlur: true)
+                                ->afterStateUpdated(function (\Filament\Forms\Set $set, ?string $state) {
+                                    $length = strlen($state ?? '');
+                                    $set('character_count', "{$length} / 160");
+                                }),
+                                
+                            Forms\Components\TextInput::make('sender_id')
+                                ->label('Sender ID (Optional)')
+                                ->placeholder('Leave empty to use default')
+                                ->maxLength(11)
+                                ->helperText('Custom sender ID (max 11 characters)'),
+                        ])
+                        ->action(function (\Illuminate\Database\Eloquent\Collection $records, array $data, SmsService $smsService) {
+                            // Filter customers with valid phone numbers
+                            $customersWithPhones = $records->filter(function($customer) {
+                                return !empty(trim($customer->phone ?? ''));
+                            });
+                            $customersWithoutPhones = $records->filter(function($customer) {
+                                return empty(trim($customer->phone ?? ''));
+                            });
+                            
+                            if ($customersWithPhones->isEmpty()) {
+                                Notification::make()
+                                    ->title('No Valid Recipients')
+                                    ->body('None of the selected customers have phone numbers.')
+                                    ->warning()
+                                    ->send();
+                                return;
+                            }
+                            
+                            // Prepare phone numbers array
+                            $phoneNumbers = $customersWithPhones->pluck('phone')->toArray();
+                            
+                            // Send bulk SMS
+                            $result = $smsService->sendBulk(
+                                $phoneNumbers, 
+                                $data['message'], 
+                                $data['sender_id'] ?: null
+                            );
+                            
+                            // Prepare notification message
+                            $title = $result['success'] ? 'SMS Sent Successfully' : 'SMS Sending Failed';
+                            $bodyParts = [];
+                            
+                            if ($result['success_count'] > 0) {
+                                $bodyParts[] = "✅ {$result['success_count']} messages sent successfully";
+                            }
+                            
+                            if ($result['failure_count'] > 0) {
+                                $bodyParts[] = "❌ {$result['failure_count']} messages failed";
+                            }
+                            
+                            if ($customersWithoutPhones->isNotEmpty()) {
+                                $bodyParts[] = "⚠️ {$customersWithoutPhones->count()} customers skipped (no phone number)";
+                            }
+                            
+                            $body = implode("\n", $bodyParts);
+                            
+                            Notification::make()
+                                ->title($title)
+                                ->body($body)
+                                ->color($result['success'] ? 'success' : 'warning')
+                                ->persistent()
                                 ->send();
                         }),
 
