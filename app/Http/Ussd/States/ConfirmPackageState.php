@@ -24,11 +24,11 @@ class ConfirmPackageState extends State
         $this->menu
             ->line('Confirm Purchase:')
             ->line($packageName)
-//            ->line('GHS ' . $priceDisplay . ' [ ' . $packageData . ' ] ' . $packageDuration)
-            ->line('GHS ' . $priceDisplay . ' [ ' . $packageData . ' ] ')
-            ->line($packageUsers . ' user(s) max')
+            ->line('GHS ' . $priceDisplay)
+            ->line('Data Limit: ' . $packageData)
+            ->line($packageUsers . ' User(s) Allowed')
             ->lineBreak()
-            ->line('1) Confirm & Pay')
+            ->line('1) Pay')
             ->line('0) Back');
     }
 
