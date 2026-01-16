@@ -130,10 +130,15 @@ class WifiUssdController extends Controller
                         $packageId = $cartData['package_id'] ?? session('selected_package_id');
                         $package = $packageId ? Package::find($packageId) : null;
 
+                        // Calculate the actual price with Hubtel fee deduction
+                        $originalPrice = $package ? floatval($package->price) : floatval($cartData['item_price'] ?? 0);
+                        $hubtelFee = $this->calculateHubtelFee($originalPrice);
+                        $finalPrice = round($originalPrice - $hubtelFee, 2);
+
                         $response['Item'] = [
                             'ItemName' => $package ? "WiFi Package: {$package->name}" : ($cartData['item_name'] ?? 'WiFi Subscription'),
                             'Qty' => 1, // Always 1 for subscriptions
-                            'Price' => $package ? round(floatval($package->price), 2) - 0.10 : round(floatval($cartData['item_price'] ?? 0), 2) - 0.10
+                            'Price' => $finalPrice
                         ];
 
                         // Add sessionId to the Item for tracking
@@ -385,6 +390,28 @@ class WifiUssdController extends Controller
         } catch (\Exception $e) {
             Log::error('WiFi fulfillment callback error', ['error' => $e->getMessage()]);
         }
+    }
+
+    /**
+     * Calculate Hubtel transaction processing fee based on amount
+     *
+     * @param float $amount
+     * @return float
+     */
+    private function calculateHubtelFee(float $amount): float
+    {
+        if ($amount >= 0.01 && $amount <= 1.00) {
+            return 0.01;
+        } elseif ($amount >= 1.01 && $amount <= 10.00) {
+            return 0.10;
+        } elseif ($amount >= 10.01 && $amount <= 50.00) {
+            return 0.50;
+        } elseif ($amount >= 50.01 && $amount <= 500.00) {
+            return round($amount * 0.01, 2); // 1% of amount
+        }
+        
+        // For amounts above 500, assume 1% (you may want to clarify this with Hubtel)
+        return round($amount * 0.01, 2);
     }
 
     /**
